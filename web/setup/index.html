@@ -2,164 +2,388 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 安装向导</title>
+  <title>Imagebed 初始化安装</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 40px;
-      background: #f5f5f5;
+    * {
+      box-sizing: border-box;
     }
-    .card {
-      max-width: 640px;
+    body {
+      margin: 0;
+      padding: 40px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+        sans-serif;
+      background: #f4f4f5;
+      color: #111827;
+    }
+    .container {
+      max-width: 720px;
       margin: 0 auto;
-      background: #fff;
-      padding: 24px 28px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 32px 28px 28px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     }
     h1 {
-      margin-top: 0;
+      margin: 0 0 8px;
       font-size: 24px;
+      letter-spacing: 0.03em;
+    }
+    .subtitle {
+      margin: 0 0 20px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .steps {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+    .step {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #6b7280;
+    }
+    .step.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .steps .sep {
+      margin: 0 6px;
+      color: #9ca3af;
     }
     label {
       display: block;
       margin-top: 12px;
+      font-size: 13px;
       font-weight: 600;
     }
     input {
       width: 100%;
-      padding: 8px 10px;
       margin-top: 4px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      box-sizing: border-box;
+      padding: 9px 10px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
     }
-    .desc {
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+    }
+    .hint {
+      margin-top: 4px;
       font-size: 12px;
-      color: #666;
+      color: #9ca3af;
     }
-    .error {
-      margin-top: 12px;
-      color: #c00;
-      font-size: 13px;
-      display: none;
-    }
-    .success {
-      margin-top: 12px;
-      color: #0a7b18;
-      font-size: 13px;
-      display: none;
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
     button {
-      margin-top: 20px;
-      padding: 10px 18px;
-      border-radius: 4px;
+      padding: 9px 18px;
+      border-radius: 999px;
       border: none;
       background: #2563eb;
-      color: #fff;
+      color: #ffffff;
       font-size: 14px;
       cursor: pointer;
     }
-    button:hover {
-      background: #1d4ed8;
+    button[disabled] {
+      opacity: 0.6;
+      cursor: default;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    .msg {
+      margin-top: 12px;
+      font-size: 13px;
+      display: none;
+    }
+    .msg.error {
+      color: #b91c1c;
+    }
+    .msg.success {
+      color: #15803d;
+    }
+    .top-links {
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+    .top-links a {
+      color: #2563eb;
+      text-decoration: none;
+      margin-right: 12px;
+    }
+    .top-links a:hover {
+      text-decoration: underline;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+    .section-desc {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 10px;
+    }
+    .fade {
+      transition: opacity 0.18s ease;
     }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="container">
+    <div class="top-links">
+      <a href="/upload/">返回上传页</a>
+      <a href="/admin/">后台管理</a>
+    </div>
     <h1>Imagebed 初始化安装</h1>
-    <p class="desc">
-      请填写数据库、R2 以及管理员信息。提交后会测试数据库连接，通过后才会写入配置。
+    <p class="subtitle">
+      建议先完成数据库配置，测试通过后系统会自动建表并写入配置，
+      然后再设置管理员账号。R2 可在后台稍后配置。
     </p>
 
-    <div id="error" class="error"></div>
-    <div id="success" class="success"></div>
+    <div class="steps">
+      <span class="step active" id="step1-pill">1. 配置数据库</span>
+      <span class="sep">→</span>
+      <span class="step" id="step2-pill">2. 设置管理员</span>
+    </div>
 
-    <form id="setup-form">
-      <label>数据库 DSN（PostgreSQL）</label>
-      <input
-        name="database_dsn"
-        placeholder="postgres://user:pass@localhost:5432/imagebed?sslmode=disable"
-        required
-      />
+    <!-- Step 1: Database -->
+    <div id="step1" class="fade">
+      <div class="section-title">步骤一：配置数据库</div>
+      <p class="section-desc">
+        只需填写数据库名称、用户和密码。系统默认连接
+        <code>127.0.0.1:5432</code>，<code>sslmode=disable</code>。
+      </p>
 
-      <label>R2 Account ID</label>
-      <input name="r2_account_id" placeholder="xxxxxxxxxxxxxxxxxxxxxxx" required />
+      <form id="db-form">
+        <label for="db-name">数据库名称</label>
+        <input
+          id="db-name"
+          name="db_name"
+          placeholder="例如：imagebed"
+          autocomplete="off"
+        />
+        <div class="hint">
+          会自动拼接为：
+          <code>postgres://user:pass@127.0.0.1:5432/&lt;数据库名称&gt;?sslmode=disable</code>
+        </div>
 
-      <label>R2 Access Key ID</label>
-      <input name="r2_access_key_id" required />
+        <label for="db-user">数据库用户</label>
+        <input
+          id="db-user"
+          name="db_user"
+          placeholder="例如：imagebed"
+          autocomplete="off"
+        />
 
-      <label>R2 Secret Access Key</label>
-      <input name="r2_secret_access_key" type="password" required />
+        <label for="db-pass">数据库密码</label>
+        <input
+          id="db-pass"
+          name="db_password"
+          type="password"
+          placeholder="请输入该用户密码"
+          autocomplete="off"
+        />
 
-      <label>R2 Region</label>
-      <input name="r2_region" placeholder="auto 或 eu，留空默认 auto" />
+        <div class="actions">
+          <button type="submit" id="db-submit">测试并保存数据库配置</button>
+        </div>
+        <div id="db-msg" class="msg"></div>
+      </form>
+    </div>
 
-      <label>R2 Public Base URL（可选）</label>
-      <input name="r2_public_base_url" placeholder="例如：https://img.example.com" />
+    <!-- Step 2: Admin -->
+    <div id="step2" class="fade" style="display: none; opacity: 0.2;">
+      <div class="section-title">步骤二：设置管理员账号</div>
+      <p class="section-desc">
+        数据库连接通过后，再设置后台登录的管理员账号。该账号会写入数据库
+        <code>admins</code> 表。
+      </p>
 
-      <label>管理员用户名</label>
-      <input name="admin_username" placeholder="admin" required />
+      <form id="admin-form">
+        <label for="admin-user">管理员用户名</label>
+        <input
+          id="admin-user"
+          name="admin_username"
+          placeholder="例如：admin"
+          autocomplete="off"
+        />
 
-      <label>管理员密码</label>
-      <input name="admin_password" type="password" required />
+        <label for="admin-pass">管理员密码</label>
+        <input
+          id="admin-pass"
+          name="admin_password"
+          type="password"
+          placeholder="请设置一个强密码"
+          autocomplete="off"
+        />
 
-      <button type="submit">开始安装</button>
-    </form>
+        <div class="actions">
+          <button type="submit" id="admin-submit" disabled>
+            完成安装
+          </button>
+        </div>
+        <div id="admin-msg" class="msg"></div>
+      </form>
+    </div>
   </div>
 
   <script>
-    const form = document.getElementById("setup-form");
-    const errBox = document.getElementById("error");
-    const okBox = document.getElementById("success");
+    const step1Pill = document.getElementById("step1-pill");
+    const step2Pill = document.getElementById("step2-pill");
+    const step2Block = document.getElementById("step2");
+    const dbForm = document.getElementById("db-form");
+    const dbMsg = document.getElementById("db-msg");
+    const adminForm = document.getElementById("admin-form");
+    const adminMsg = document.getElementById("admin-msg");
+    const adminSubmit = document.getElementById("admin-submit");
 
-    function showError(msg) {
-      errBox.textContent = "错误：" + msg;
-      errBox.style.display = "block";
-      okBox.style.display = "none";
+    let dbConfigured = false;
+
+    function showMsg(el, type, text) {
+      el.textContent = text;
+      el.classList.remove("error", "success");
+      el.classList.add(type === "error" ? "error" : "success");
+      el.style.display = "block";
     }
 
-    function showSuccess(msg) {
-      okBox.textContent = msg;
-      okBox.style.display = "block";
-      errBox.style.display = "none";
-    }
-
-    form.addEventListener("submit", async (e) => {
+    dbForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      dbMsg.style.display = "none";
 
-      const data = new FormData(form);
+      const dbName = document.getElementById("db-name").value.trim();
+      const dbUser = document.getElementById("db-user").value.trim();
+      const dbPass = document.getElementById("db-pass").value.trim();
+
+      if (!dbName || !dbUser || !dbPass) {
+        showMsg(dbMsg, "error", "数据库名称、用户和密码均不能为空。");
+        return;
+      }
+
       const payload = {
-        database_dsn: data.get("database_dsn")?.trim(),
-        r2_account_id: data.get("r2_account_id")?.trim(),
-        r2_access_key_id: data.get("r2_access_key_id")?.trim(),
-        r2_secret_access_key: data.get("r2_secret_access_key")?.trim(),
-        r2_region: data.get("r2_region")?.trim(),
-        r2_public_base_url: data.get("r2_public_base_url")?.trim(),
-        admin_username: data.get("admin_username")?.trim(),
-        admin_password: data.get("admin_password")?.trim(),
+        db_name: dbName,
+        db_user: dbUser,
+        db_password: dbPass,
       };
 
+      const submitBtn = document.getElementById("db-submit");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "测试中...";
+
       try {
-        const res = await fetch("/api/setup", {
+        const res = await fetch("/api/setup/database", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+
         const json = await res.json().catch(() => ({}));
 
-        if (!res.ok || !json.ok) {
-          const msg = json.detail || json.error || "安装失败，请检查配置";
-          showError(msg);
-          return;
+        if (!res.ok) {
+          const msg =
+            json.detail ||
+            json.error ||
+            "数据库测试或初始化失败，请检查配置。";
+          showMsg(dbMsg, "error", msg);
+          dbConfigured = false;
+          step2Block.style.opacity = 0.2;
+          step2Pill.classList.remove("active");
+          adminSubmit.disabled = true;
+        } else {
+          dbConfigured = true;
+          showMsg(
+            dbMsg,
+            "success",
+            "数据库连接成功，表结构已初始化并写入配置。"
+          );
+          step2Block.style.display = "block";
+          step2Block.style.opacity = 1;
+          step2Pill.classList.add("active");
+          adminSubmit.disabled = false;
+          step1Pill.classList.remove("active");
         }
-
-        showSuccess("安装完成，服务已可用，可以关闭本页面或直接调用 API。");
-        form.querySelector("button[type=submit]").disabled = true;
       } catch (e) {
-        showError("请求失败：" + e);
+        showMsg(dbMsg, "error", "请求失败：" + e);
+        dbConfigured = false;
+        step2Block.style.opacity = 0.2;
+        step2Pill.classList.remove("active");
+        adminSubmit.disabled = true;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "测试并保存数据库配置";
+      }
+    });
+
+    adminForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      adminMsg.style.display = "none";
+
+      if (!dbConfigured) {
+        showMsg(adminMsg, "error", "请先完成数据库配置并测试通过。");
+        return;
+      }
+
+      const adminUser = document.getElementById("admin-user").value.trim();
+      const adminPass = document
+        .getElementById("admin-pass")
+        .value.trim();
+
+      if (!adminUser || !adminPass) {
+        showMsg(adminMsg, "error", "管理员用户名和密码均不能为空。");
+        return;
+      }
+
+      const payload = {
+        admin_username: adminUser,
+        admin_password: adminPass,
+      };
+
+      adminSubmit.disabled = true;
+      adminSubmit.textContent = "正在完成安装...";
+
+      try {
+        const res = await fetch("/api/setup/admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          const msg =
+            json.detail ||
+            json.error ||
+            "创建管理员账号失败，请检查日志。";
+          showMsg(adminMsg, "error", msg);
+        } else {
+          showMsg(
+            adminMsg,
+            "success",
+            "安装完成！现在可以前往 /upload 上传图片，或前往 /admin 管理桶。"
+          );
+          setTimeout(() => {
+            window.location.href = "/upload/";
+          }, 2000);
+        }
+      } catch (e) {
+        showMsg(adminMsg, "error", "请求失败：" + e);
+      } finally {
+        adminSubmit.disabled = false;
+        adminSubmit.textContent = "完成安装";
       }
     });
   </script>
