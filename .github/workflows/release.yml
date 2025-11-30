@@ -1,0 +1,34 @@
+name: Release Imagebed
+
+on:
+  push:
+    tags:
+      - "v*"     # 任何 v 开头的 tag，例：v0.1.0, v1.0.0
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Tidy modules
+        run: go mod tidy
+
+      - name: Build Linux binary
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o imagebed-server-linux-amd64 ./cmd/server
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            imagebed-server-linux-amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

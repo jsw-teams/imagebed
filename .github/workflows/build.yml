@@ -1,13 +1,12 @@
-name: Go CI
+name: Release
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - "v*.*.*"   # 打 tag 才触发，例如 v0.1.0
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,15 +21,21 @@ jobs:
       - name: Tidy modules
         run: go mod tidy
 
-      - name: Build Linux binary
+      - name: Build linux amd64 binary
         run: |
-          GOOS=linux GOARCH=amd64 go build -o imagebed-server ./cmd/server
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+          go build -o imagebed-server-linux-amd64 ./cmd/server
 
-      - name: Test
-        run: go test ./...
+      - name: (optional) Compress binary
+        run: |
+          tar -czf imagebed-server-linux-amd64.tar.gz imagebed-server-linux-amd64
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
-          name: imagebed-server-linux-amd64
-          path: imagebed-server
+          files: |
+            imagebed-server-linux-amd64
+            imagebed-server-linux-amd64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
