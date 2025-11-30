@@ -87,7 +87,7 @@ func (c *R2Client) PutObject(
 		Bucket:        aws.String(bucket),
 		Key:           aws.String(key),
 		Body:          body,
-		ContentLength: size,
+		ContentLength: aws.Int64(size),
 		ContentType:   aws.String(contentType),
 	})
 	return err
