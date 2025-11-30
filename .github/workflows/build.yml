@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,8 +22,15 @@ jobs:
       - name: Tidy modules
         run: go mod tidy
 
-      - name: Build
-        run: go build ./...
+      - name: Build Linux binary
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o imagebed-server ./cmd/server
 
       - name: Test
         run: go test ./...
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: imagebed-server-linux-amd64
+          path: imagebed-server
