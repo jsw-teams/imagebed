@@ -3,7 +3,10 @@ name: Release Imagebed
 on:
   push:
     tags:
-      - "v*"     # 任何 v 开头的 tag，例：v0.1.0, v1.0.0
+      - "v*"
+
+permissions:
+  contents: write    # 创建 Release + 上传附件 需要 write 权限
 
 jobs:
   build-and-release:
@@ -21,7 +24,10 @@ jobs:
       - name: Tidy modules
         run: go mod tidy
 
-      - name: Build Linux binary
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build Linux amd64 binary
         run: |
           GOOS=linux GOARCH=amd64 go build -o imagebed-server-linux-amd64 ./cmd/server
 
