@@ -48,7 +48,7 @@ func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 		cfg:        cfg,
 	}
 
-	// 如果已经安装过，启动时就初始化 DB / R2 / Turnstile / 审查
+	// 如果已经安装过，启动时就初始化 DB / R2 / Turnstile / 审查，并执行一次迁移
 	if cfg.Installed {
 		if err := s.initRuntime(context.Background()); err != nil {
 			return nil, err
@@ -64,19 +64,29 @@ func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 }
 
 func (s *Server) initRuntime(ctx context.Context) error {
+	// 连接数据库
 	db, err := database.New(ctx, s.cfg.Database.DSN)
 	if err != nil {
 		return err
 	}
 
+	// 自动执行 migrations（建表）
+	if err := database.RunMigrations(ctx, db); err != nil {
+		db.Close()
+		return err
+	}
+
+	// 初始化 R2
 	r2Client, err := storage.NewR2Client(ctx, s.cfg.R2)
 	if err != nil {
 		db.Close()
 		return err
 	}
 
+	// 审查服务
 	modService := moderation.NewService(s.cfg.Moderation, s.cfg.App.AllowedMimeTypes)
 
+	// Turnstile 验证器
 	var verifier *turnstile.Verifier
 	if s.cfg.Turnstile.Enabled && s.cfg.Turnstile.SecretKey != "" {
 		verifier = turnstile.NewVerifier(s.cfg.Turnstile.SecretKey)
@@ -280,7 +290,17 @@ func (s *Server) handleSetup(c *gin.Context) {
 		return
 	}
 
-	// 2. 初始化管理员（依赖 migrations 里的 admins 表）
+	// 2. 自动执行 migrations（首次建表）
+	if err := database.RunMigrations(ctx, pool); err != nil {
+		pool.Close()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "db_migration_failed",
+			"detail": err.Error(),
+		})
+		return
+	}
+
+	// 3. 初始化管理员（依赖 admins 表）
 	if err := models.EnsureInitialAdmin(ctx, pool, req.AdminUsername, req.AdminPassword); err != nil {
 		pool.Close()
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -290,7 +310,7 @@ func (s *Server) handleSetup(c *gin.Context) {
 		return
 	}
 
-	// 3. 基于现有 cfg 生成新 cfg
+	// 4. 基于现有 cfg 生成新 cfg
 	s.mu.RLock()
 	oldCfg := s.cfg
 	s.mu.RUnlock()
@@ -308,7 +328,7 @@ func (s *Server) handleSetup(c *gin.Context) {
 		newCfg.R2.PublicBaseURL = req.R2PublicBaseURL
 	}
 
-	// 4. 先写配置文件
+	// 5. 先写配置文件
 	if err := config.Save(s.configPath, &newCfg); err != nil {
 		pool.Close()
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -318,7 +338,7 @@ func (s *Server) handleSetup(c *gin.Context) {
 		return
 	}
 
-	// 5. 初始化 R2 / 审查 / Turnstile
+	// 6. 初始化 R2 / 审查 / Turnstile
 	r2Client, err := storage.NewR2Client(ctx, newCfg.R2)
 	if err != nil {
 		pool.Close()
@@ -335,7 +355,7 @@ func (s *Server) handleSetup(c *gin.Context) {
 		verifier = turnstile.NewVerifier(newCfg.Turnstile.SecretKey)
 	}
 
-	// 6. 更新运行时依赖（无须重启）
+	// 7. 更新运行时依赖（无须重启）
 	s.mu.Lock()
 	if s.db != nil {
 		s.db.Close()
@@ -347,7 +367,7 @@ func (s *Server) handleSetup(c *gin.Context) {
 	s.verifier = verifier
 	s.mu.Unlock()
 
-	// 7. 注入到 handlers
+	// 8. 注入到 handlers
 	if s.bucketHandler != nil {
 		s.bucketHandler.SetDeps(pool, r2Client)
 	}
