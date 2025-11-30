@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imagebed 后台管理</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 40px;
+      background: #f5f5f5;
+    }
+    .card {
+      max-width: 960px;
+      margin: 0 auto 24px;
+      background: #fff;
+      padding: 24px 28px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    label {
+      display: block;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 4px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+    .row {
+      display: flex;
+      gap: 16px;
+    }
+    .row > div {
+      flex: 1;
+    }
+    .desc {
+      font-size: 12px;
+      color: #666;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    th,
+    td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    .error {
+      margin-top: 12px;
+      color: #c00;
+      font-size: 13px;
+      display: none;
+    }
+    .success {
+      margin-top: 12px;
+      color: #0a7b18;
+      font-size: 13px;
+      display: none;
+    }
+    button {
+      margin-top: 12px;
+      padding: 8px 14px;
+      border-radius: 4px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .danger {
+      background: #dc2626;
+    }
+    .danger:hover {
+      background: #b91c1c;
+    }
+    .top-links {
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .top-links a {
+      color: #2563eb;
+      text-decoration: none;
+      margin-right: 12px;
+    }
+    .top-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top-links">
+      <a href="/">返回首页</a>
+      <a href="/setup/">初始化安装</a>
+    </div>
+    <h1>Imagebed 后台管理</h1>
+    <p class="desc">
+      这里是一个简易的桶管理界面，用于调试 API。
+      创建 / 修改 / 删除桶需要 Turnstile Token（根据后端配置），可以先用 Cloudflare 提供的测试 token。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>1. 当前桶列表</h2>
+    <button id="reload">刷新列表</button>
+    <div id="list-error" class="error"></div>
+    <table id="bucket-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>名称</th>
+          <th>R2 桶名</th>
+          <th>配额 (max_bytes)</th>
+          <th>已用 (current_bytes)</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="7">正在加载...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>2. 创建新桶</h2>
+    <div id="create-error" class="error"></div>
+    <div id="create-success" class="success"></div>
+    <div class="row">
+      <div>
+        <label>桶显示名称</label>
+        <input id="create-name" placeholder="例如：默认图床" />
+      </div>
+      <div>
+        <label>R2 桶名称</label>
+        <input id="create-r2-bucket" placeholder="例如：imgbed" />
+      </div>
+    </div>
+    <label>最大容量（字节）</label>
+    <input
+      id="create-max-bytes"
+      placeholder="如 1073741824 = 1 GiB"
+      type="number"
+    />
+
+    <label>Turnstile Token（调试用，可留空）</label>
+    <input
+      id="create-token"
+      placeholder="如果后端启用了 Turnstile，可以在此填写 token；后续可嵌入 Turnstile 小组件。"
+    />
+
+    <button id="create-btn">创建桶</button>
+  </div>
+
+  <script>
+    const tableBody = document.querySelector("#bucket-table tbody");
+    const listError = document.getElementById("list-error");
+    const reloadBtn = document.getElementById("reload");
+
+    const createError = document.getElementById("create-error");
+    const createSuccess = document.getElementById("create-success");
+    const createName = document.getElementById("create-name");
+    const createR2Bucket = document.getElementById("create-r2-bucket");
+    const createMaxBytes = document.getElementById("create-max-bytes");
+    const createToken = document.getElementById("create-token");
+    const createBtn = document.getElementById("create-btn");
+
+    function showListError(msg) {
+      listError.textContent = "错误：" + msg;
+      listError.style.display = "block";
+    }
+    function clearListError() {
+      listError.textContent = "";
+      listError.style.display = "none";
+    }
+
+    function showCreateError(msg) {
+      createError.textContent = "错误：" + msg;
+      createError.style.display = "block";
+      createSuccess.style.display = "none";
+    }
+    function showCreateSuccess(msg) {
+      createSuccess.textContent = msg;
+      createSuccess.style.display = "block";
+      createError.style.display = "none";
+    }
+
+    async function loadBuckets() {
+      clearListError();
+      tableBody.innerHTML =
+        '<tr><td colspan="7">正在加载...</td></tr>';
+
+      try {
+        const res = await fetch("/api/buckets");
+        const json = await res.json().catch(() => ({}));
+
+        if (res.status === 503 && json.error === "setup_required") {
+          window.location.href = "/setup/";
+          return;
+        }
+
+        if (!res.ok) {
+          showListError(json.error || "加载失败");
+          tableBody.innerHTML =
+            '<tr><td colspan="7">加载失败</td></tr>';
+          return;
+        }
+
+        if (!Array.isArray(json) || json.length === 0) {
+          tableBody.innerHTML =
+            '<tr><td colspan="7">暂无桶</td></tr>';
+          return;
+        }
+
+        tableBody.innerHTML = "";
+        json.forEach((b) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${b.id}</td>
+            <td>${b.name}</td>
+            <td>${b.r2_bucket}</td>
+            <td>${b.max_bytes}</td>
+            <td>${b.current_bytes}</td>
+            <td>${b.is_active ? "active" : "inactive"}</td>
+            <td>
+              <button class="danger" data-id="${b.id}" data-bucket="${b.r2_bucket}">删除</button>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+        });
+      } catch (e) {
+        showListError("加载失败：" + e);
+        tableBody.innerHTML =
+          '<tr><td colspan="7">加载失败</td></tr>';
+      }
+    }
+
+    reloadBtn.addEventListener("click", loadBuckets);
+
+    tableBody.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button.danger");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const r2Bucket = btn.dataset.bucket;
+      if (!id) return;
+
+      const token = window.prompt(
+        `即将删除桶：${r2Bucket}\n（注意：R2 桶必须为空）\n如启用 Turnstile，请输入 token；否则留空：`
+      );
+      if (!window.confirm("确认删除该桶？此操作不可恢复！")) return;
+
+      try {
+        const res = await fetch(`/api/buckets/${id}`, {
+          method: "DELETE",
+          headers: token
+            ? { "X-Turnstile-Token": token.trim() }
+            : {},
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          alert("删除失败：" + (json.error || "未知错误"));
+          return;
+        }
+      } catch (e) {
+        alert("删除失败：" + e);
+        return;
+      }
+      await loadBuckets();
+    });
+
+    createBtn.addEventListener("click", async () => {
+      const name = createName.value.trim();
+      const r2Bucket = createR2Bucket.value.trim();
+      const maxBytes = parseInt(createMaxBytes.value.trim(), 10) || 0;
+      const token = createToken.value.trim();
+
+      if (!name || !r2Bucket || maxBytes <= 0) {
+        showCreateError("名称 / R2 桶名 / 最大容量均不能为空且容量需大于 0");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/buckets", {
+          method: "POST",
+          headers: Object.assign(
+            { "Content-Type": "application/json" },
+            token ? { "X-Turnstile-Token": token } : {}
+          ),
+          body: JSON.stringify({
+            name,
+            r2_bucket: r2Bucket,
+            max_bytes: maxBytes,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.status === 503 && json.error === "setup_required") {
+          window.location.href = "/setup/";
+          return;
+        }
+        if (!res.ok) {
+          showCreateError(json.error || "创建失败");
+          return;
+        }
+        showCreateSuccess("创建成功！");
+        createName.value = "";
+        createR2Bucket.value = "";
+        createMaxBytes.value = "";
+        createToken.value = "";
+        await loadBuckets();
+      } catch (e) {
+        showCreateError("创建失败：" + e);
+      }
+    });
+
+    loadBuckets();
+  </script>
+</body>
+</html>

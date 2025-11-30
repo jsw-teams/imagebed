@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imagebed 图床</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 40px;
+      background: #f5f5f5;
+    }
+    .card {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 24px 28px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+    input,
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 4px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+    .desc {
+      font-size: 12px;
+      color: #666;
+    }
+    .error {
+      margin-top: 12px;
+      color: #c00;
+      font-size: 13px;
+      display: none;
+    }
+    .success {
+      margin-top: 12px;
+      color: #0a7b18;
+      font-size: 13px;
+      display: none;
+      word-break: break-all;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 18px;
+      border-radius: 4px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .header-links {
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .header-links a {
+      color: #2563eb;
+      text-decoration: none;
+      margin-right: 12px;
+    }
+    .header-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header-links">
+      <a href="/admin/">后台管理</a>
+      <a href="/setup/">初始化安装</a>
+    </div>
+    <h1>Imagebed 图床 - 上传</h1>
+    <p class="desc">
+      这是一个简单的前端页面，用于调用后端 API：
+      <code>/api/buckets</code> &amp; <code>/api/buckets/:id/upload</code>。
+      若未安装，会自动跳转到 <code>/setup/</code>。
+    </p>
+
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+
+    <form id="upload-form">
+      <label>选择存储桶</label>
+      <select id="bucket-select" name="bucket_id">
+        <option value="">正在加载桶列表...</option>
+      </select>
+      <div class="desc">桶由管理员在后台创建，普通上传只需选择。</div>
+
+      <label>图片文件</label>
+      <input type="file" name="file" accept="image/*" required />
+
+      <label>Turnstile Token（调试用，可留空）</label>
+      <input
+        type="text"
+        name="turnstile_token"
+        placeholder="如果后端启用了 Turnstile，可以在此填写 token；后续可嵌入真正的 Turnstile 小组件。"
+      />
+
+      <button type="submit">上传图片</button>
+    </form>
+  </div>
+
+  <script>
+    const errBox = document.getElementById("error");
+    const okBox = document.getElementById("success");
+    const bucketSelect = document.getElementById("bucket-select");
+    const form = document.getElementById("upload-form");
+
+    function showError(msg) {
+      errBox.textContent = "错误：" + msg;
+      errBox.style.display = "block";
+      okBox.style.display = "none";
+    }
+
+    function showSuccess(msg) {
+      okBox.textContent = msg;
+      okBox.style.display = "block";
+      errBox.style.display = "none";
+    }
+
+    async function loadBuckets() {
+      try {
+        const res = await fetch("/api/buckets");
+        const json = await res.json().catch(() => ({}));
+
+        if (res.status === 503 && json.error === "setup_required") {
+          window.location.href = "/setup/";
+          return;
+        }
+
+        if (!res.ok) {
+          showError(json.error || "加载桶列表失败");
+          bucketSelect.innerHTML =
+            '<option value="">加载失败，请稍后重试</option>';
+          return;
+        }
+
+        if (!Array.isArray(json) || json.length === 0) {
+          bucketSelect.innerHTML =
+            '<option value="">暂无桶，请先在后台创建</option>';
+          return;
+        }
+
+        bucketSelect.innerHTML = "";
+        json.forEach((b) => {
+          const opt = document.createElement("option");
+          opt.value = b.id;
+          opt.textContent = `${b.name} (剩余 ${
+            b.max_bytes - b.current_bytes
+          } 字节)`;
+          bucketSelect.appendChild(opt);
+        });
+      } catch (e) {
+        showError("加载桶列表失败：" + e);
+        bucketSelect.innerHTML =
+          '<option value="">加载失败，请检查网络</option>';
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const bucketId = bucketSelect.value;
+      const fileInput = form.querySelector('input[name="file"]');
+      const tokenInput = form.querySelector('input[name="turnstile_token"]');
+
+      if (!bucketId) {
+        showError("请先选择一个桶");
+        return;
+      }
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showError("请选择要上传的图片文件");
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("file", fileInput.files[0]);
+      if (tokenInput.value.trim()) {
+        fd.append("cf-turnstile-response", tokenInput.value.trim());
+      }
+
+      try {
+        const res = await fetch(`/api/buckets/${bucketId}/upload`, {
+          method: "POST",
+          body: fd,
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (res.status === 503 && json.error === "setup_required") {
+          window.location.href = "/setup/";
+          return;
+        }
+
+        if (!res.ok) {
+          const msg = json.error || "上传失败";
+          showError(msg);
+          return;
+        }
+
+        const url = json.url || "";
+        showSuccess("上传成功，图片地址：" + url);
+      } catch (e) {
+        showError("上传失败：" + e);
+      }
+    });
+
+    loadBuckets();
+  </script>
+</body>
+</html>
