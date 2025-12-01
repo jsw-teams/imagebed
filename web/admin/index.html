@@ -134,7 +134,13 @@
     #sec-buckets, #sec-create, #sec-turnstile {
       display: none;
     }
+
+    #ts-widget {
+      margin-top: 10px;
+    }
   </style>
+  <!-- Turnstile 官方脚本：用于在后台渲染小组件 -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
   <div class="container">
@@ -161,11 +167,6 @@
         <input id="admin-pass" type="password" style="min-width:120px" />
         <button id="btn-login">登录</button>
         <span id="login-status" class="badge warn">未登录</span>
-      </div>
-      <div class="field-row">
-        <label for="ts-token">Turnstile Token（调试用，可留空）</label>
-        <input id="ts-token" style="min-width:260px"
-               placeholder="如启用 Turnstile，可在此填写调试 token；正式环境请用前端小组件。" />
       </div>
       <div id="login-msg" class="msg"></div>
     </div>
@@ -230,7 +231,10 @@
       <div class="section-title">3. Turnstile 人机验证配置</div>
       <div class="section-desc">
         在这里配置 Cloudflare Turnstile。配置会写入数据库（<code>turnstile_settings</code> 表），
-        不再需要手动编辑配置文件中的 site_key / secret_key。
+        不再需要手动编辑配置文件中的 <code>site_key</code> / <code>secret_key</code>。<br />
+        <strong>Site Key（站点密钥）</strong>：用于前端页面的 Turnstile 小组件；<br />
+        <strong>Secret Key（秘密密钥）</strong>：仅在后端调用 <code>/siteverify</code> 使用，不会在前端暴露。<br />
+        <strong>启用时必须先在下面小组件通过一次验证，后台会使用真实 token 调用 Cloudflare 验证，成功后才允许启用。</strong>
       </div>
 
       <div class="field-row">
@@ -244,9 +248,14 @@
         <input id="ts-site" style="min-width:260px" placeholder="从 Cloudflare Turnstile 控制台复制" />
       </div>
       <div class="field-row">
-        <label for="ts-secret">密钥 (secret_key)</label>
+        <label for="ts-secret">秘密密钥 (secret_key)</label>
         <input id="ts-secret" type="password" style="min-width:260px" placeholder="不会回显，请妥善保存" />
       </div>
+
+      <div class="field-row">
+        <div id="ts-widget"></div>
+      </div>
+
       <div class="field-row">
         <button id="btn-ts-save">保存配置</button>
         <span id="ts-hint" style="font-size:12px;color:#6b7280;margin-left:6px;"></span>
@@ -259,6 +268,9 @@
     let adminUser = "";
     let adminPass = "";
     let loggedIn = false;
+
+    let tsWidgetId = null;
+    let lastSiteKey = "";
 
     const loginMsg = document.getElementById("login-msg");
     const loginStatus = document.getElementById("login-status");
@@ -287,10 +299,30 @@
       return { "Authorization": "Basic " + token };
     }
 
-    function tsHeader() {
-      const token = document.getElementById("ts-token").value.trim();
-      if (!token) return {};
-      return { "X-Turnstile-Token": token };
+    // 尝试根据当前 site_key 渲染 Turnstile 小组件
+    function tryRenderTurnstile(siteKey) {
+      lastSiteKey = siteKey || "";
+      const container = document.getElementById("ts-widget");
+      container.innerHTML = "";
+
+      if (!siteKey) {
+        tsWidgetId = null;
+        tsHint.textContent = "提示：请先保存有效的 Site Key / Secret Key，再刷新本页面，此处才会渲染 Turnstile 小组件用于启用校验。";
+        return;
+      }
+
+      function attempt() {
+        if (window.turnstile && typeof window.turnstile.render === "function") {
+          tsWidgetId = window.turnstile.render("#ts-widget", {
+            sitekey: siteKey
+          });
+          tsHint.textContent = "请在下方小组件通过人机验证，然后勾选“启用”并点击保存。";
+        } else {
+          // 脚本还没加载好，稍后重试
+          setTimeout(attempt, 400);
+        }
+      }
+      attempt();
     }
 
     async function login() {
@@ -456,7 +488,6 @@
         const headers = Object.assign(
           { "Content-Type": "application/json" },
           authHeaders(),
-          tsHeader(),
         );
 
         const res = await fetch("/api/buckets", {
@@ -494,7 +525,7 @@
       }
 
       try {
-        const headers = Object.assign({}, authHeaders(), tsHeader());
+        const headers = Object.assign({}, authHeaders());
         const res = await fetch("/api/buckets/" + encodeURIComponent(id), {
           method: "DELETE",
           headers,
@@ -545,6 +576,9 @@
         } else {
           tsHint.textContent = "当前未设置密钥。";
         }
+
+        // 根据当前 site_key 渲染小组件
+        tryRenderTurnstile(siteKey);
       } catch (err) {
         showMsg(tsMsg, "error", "加载 Turnstile 配置失败：" + err);
       }
@@ -562,9 +596,26 @@
       const site = document.getElementById("ts-site").value.trim();
       const secret = document.getElementById("ts-secret").value.trim();
 
+      if (!site && !secret && !enabled) {
+        // 允许简单关闭并清空
+      }
+
       if (enabled) {
         if (!site || !secret) {
-          showMsg(tsMsg, "error", "启用 Turnstile 时必须填写站点密钥和密钥。");
+          showMsg(tsMsg, "error", "启用 Turnstile 时必须填写站点密钥和秘密密钥。");
+          return;
+        }
+        if (!window.turnstile || !tsWidgetId) {
+          showMsg(tsMsg, "error", "未检测到 Turnstile 小组件，请刷新页面或检查 CSP 设置。");
+          return;
+        }
+      }
+
+      let testToken = "";
+      if (enabled && window.turnstile && tsWidgetId) {
+        testToken = window.turnstile.getResponse(tsWidgetId);
+        if (!testToken) {
+          showMsg(tsMsg, "error", "请先在下方小组件完成验证，然后再启用。");
           return;
         }
       }
@@ -573,6 +624,7 @@
         enabled: enabled,
         site_key: site,
         secret_key: secret,
+        test_token: testToken,
       };
 
       const btn = document.getElementById("btn-ts-save");
@@ -592,15 +644,23 @@
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          showMsg(tsMsg, "error", json.error || "保存 Turnstile 配置失败。");
+          if (json.error === "turnstile_verify_failed") {
+            showMsg(tsMsg, "error", "验证 Turnstile 配置失败：" + (json.detail || "请检查 Site Key / Secret Key / CSP 配置等。"));
+          } else {
+            showMsg(tsMsg, "error", json.error || "保存 Turnstile 配置失败。");
+          }
         } else {
           showMsg(tsMsg, "success", "保存成功。");
+          // 保存后重新加载配置 & 小组件
           loadTurnstileConfig();
         }
       } catch (err) {
         showMsg(tsMsg, "error", "保存 Turnstile 配置请求失败：" + err);
       } finally {
         btn.disabled = false;
+        if (window.turnstile && tsWidgetId) {
+          window.turnstile.reset(tsWidgetId);
+        }
       }
     }
 

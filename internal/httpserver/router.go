@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -195,21 +196,21 @@ func (s *Server) buildEngine() {
 			func() bool { return s.IsTurnstileEnabled() },
 		)
 
-		// bucket 管理接口：所有读写都需要管理员登录
+		// bucket 管理接口：所有读写都需要管理员登录（不叠加 Turnstile）
 		bucketsAdmin := api.Group("/buckets")
 		bucketsAdmin.Use(middleware.AdminAuth(s.getDB))
 		{
 			bucketsAdmin.GET("", s.bucketHandler.ListBuckets)
 			bucketsAdmin.GET("/:id", s.bucketHandler.GetBucket)
-			bucketsAdmin.POST("", tsMiddleware, s.bucketHandler.CreateBucket)
-			bucketsAdmin.PUT("/:id", tsMiddleware, s.bucketHandler.UpdateBucket)
-			bucketsAdmin.DELETE("/:id", tsMiddleware, s.bucketHandler.DeleteBucket)
+			bucketsAdmin.POST("", s.bucketHandler.CreateBucket)
+			bucketsAdmin.PUT("/:id", s.bucketHandler.UpdateBucket)
+			bucketsAdmin.DELETE("/:id", s.bucketHandler.DeleteBucket)
 		}
 
-		// 旧接口：指定桶上传（供第三方程序使用）
+		// 旧接口：指定桶上传（供第三方程序使用），使用 Turnstile 防滥用
 		api.POST("/buckets/:bucketID/upload", tsMiddleware, s.imageHandler.Upload)
 
-		// 新接口：自动分配桶上传（给前端上传页使用）
+		// 新接口：自动分配桶上传（给前端上传页使用），同样使用 Turnstile 防滥用
 		api.POST("/upload", tsMiddleware, s.handleAutoUpload)
 
 		api.GET("/images/:id", s.imageHandler.GetImageMeta)
@@ -616,15 +617,16 @@ func (s *Server) handleAutoUpload(c *gin.Context) {
 // ---------- 后台 Turnstile 配置 API ----------
 
 type turnstileConfigResponse struct {
-	Enabled  bool   `json:"enabled"`
-	SiteKey  string `json:"site_key"`
-	HasSecret bool  `json:"has_secret"`
+	Enabled   bool   `json:"enabled"`
+	SiteKey   string `json:"site_key"`
+	HasSecret bool   `json:"has_secret"`
 }
 
 type updateTurnstileRequest struct {
 	Enabled   bool   `json:"enabled"`
 	SiteKey   string `json:"site_key"`
 	SecretKey string `json:"secret_key"`
+	TestToken string `json:"test_token"` // 管理后台小组件生成的真实 token
 }
 
 func (s *Server) handleAdminGetTurnstile(c *gin.Context) {
@@ -663,16 +665,16 @@ func (s *Server) handleAdminGetTurnstile(c *gin.Context) {
 
 	if tsCfg == nil {
 		c.JSON(http.StatusOK, turnstileConfigResponse{
-			Enabled:  false,
-			SiteKey:  "",
+			Enabled:   false,
+			SiteKey:   "",
 			HasSecret: false,
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, turnstileConfigResponse{
-		Enabled:  tsCfg.Enabled,
-		SiteKey:  tsCfg.SiteKey,
+		Enabled:   tsCfg.Enabled,
+		SiteKey:   tsCfg.SiteKey,
 		HasSecret: tsCfg.SecretKey != "",
 	})
 }
@@ -700,12 +702,30 @@ func (s *Server) handleAdminUpdateTurnstile(c *gin.Context) {
 
 	req.SiteKey = strings.TrimSpace(req.SiteKey)
 	req.SecretKey = strings.TrimSpace(req.SecretKey)
+	req.TestToken = strings.TrimSpace(req.TestToken)
 
+	// 启用时：必须有 site_key / secret_key / test_token，并且 siteverify 成功才允许启用
 	if req.Enabled {
 		if req.SiteKey == "" || req.SecretKey == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "enabled_requires_site_and_secret"})
 			return
 		}
+		if req.TestToken == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "enabled_requires_test_token"})
+			return
+		}
+		if err := verifyTurnstileConfig(c.Request.Context(), req.SecretKey, req.TestToken); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":  "turnstile_verify_failed",
+				"detail": err.Error(),
+			})
+			return
+		}
+	}
+
+	// 如果只是保存 Key 而不启用，可以不验证，直接写入 enabled=false
+	if !req.Enabled && (req.SiteKey == "" && req.SecretKey == "") {
+		// 允许直接关闭并清空
 	}
 
 	ctx := c.Request.Context()
@@ -730,8 +750,74 @@ func (s *Server) handleAdminUpdateTurnstile(c *gin.Context) {
 	s.mu.Unlock()
 
 	c.JSON(http.StatusOK, turnstileConfigResponse{
-		Enabled:  tsCfg.Enabled,
-		SiteKey:  tsCfg.SiteKey,
+		Enabled:   tsCfg.Enabled,
+		SiteKey:   tsCfg.SiteKey,
 		HasSecret: tsCfg.SecretKey != "",
 	})
+}
+
+// ---------- Turnstile 配置验证（用真实 token 调用 siteverify） ----------
+
+type siteVerifyResp struct {
+	Success    bool     `json:"success"`
+	ErrorCodes []string `json:"error-codes"`
+}
+
+func verifyTurnstileConfig(ctx context.Context, secret, token string) error {
+	if secret == "" {
+		return fmt.Errorf("empty secret")
+	}
+	if token == "" {
+		return fmt.Errorf("empty token")
+	}
+
+	form := url.Values{}
+	form.Set("secret", secret)
+	form.Set("response", token)
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		"https://challenges.cloudflare.com/turnstile/v0/siteverify",
+		strings.NewReader(form.Encode()),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var out siteVerifyResp
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return err
+	}
+
+	if out.Success {
+		return nil
+	}
+
+	// 这里严格区分：如果是 secret 错误，明确提示；否则视为 token 无效
+	secretErrs := map[string]bool{
+		"invalid-input-secret": true,
+		"missing-input-secret": true,
+		"secret-mismatch":      true,
+	}
+
+	for _, code := range out.ErrorCodes {
+		if secretErrs[code] {
+			return fmt.Errorf("invalid secret: %s", code)
+		}
+	}
+
+	if len(out.ErrorCodes) > 0 {
+		return fmt.Errorf("invalid token: %s", strings.Join(out.ErrorCodes, ","))
+	}
+
+	return fmt.Errorf("turnstile verification failed")
 }
