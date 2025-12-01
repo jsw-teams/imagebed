@@ -59,7 +59,7 @@
       font-size: 13px;
       font-weight: 600;
     }
-    input, textarea {
+    input {
       font-family: inherit;
       font-size: 14px;
       border-radius: 6px;
@@ -67,7 +67,7 @@
       padding: 7px 9px;
       box-sizing: border-box;
     }
-    input:focus, textarea:focus {
+    input:focus {
       outline: none;
       border-color: #2563eb;
       box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
@@ -129,6 +129,11 @@
     }
     .badge.ok { background: #dcfce7; color: #166534; }
     .badge.warn { background: #fee2e2; color: #b91c1c; }
+
+    /* 未登录时隐藏后台管理部分 */
+    #sec-buckets, #sec-create, #sec-turnstile {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -139,15 +144,14 @@
 
     <h1>Imagebed 后台管理</h1>
     <p class="subtitle">
-      这里是一个简单的后台管理界面，用于试验 API、创建 / 修改 / 删除桶配置。
-      敏感操作需要管理员账号密码。
+      管理面板：需要管理员账号登录后才能查看存储桶、配置 Turnstile 等敏感信息。
     </p>
 
     <!-- 登录区域 -->
     <div class="section">
       <div class="section-title">0. 管理员登录</div>
       <div class="section-desc">
-        使用初始化时创建的管理员账号进行登录。登录通过后，后续桶增删改操作会自动携带 Basic Auth。
+        使用初始化安装时创建的管理员账号登录。登录成功后会解锁下面各个管理区域。
       </div>
 
       <div class="field-row">
@@ -159,17 +163,18 @@
         <span id="login-status" class="badge warn">未登录</span>
       </div>
       <div class="field-row">
-        <label for="ts-token">Turnstile Token（可留空）</label>
-        <input id="ts-token" style="min-width:260px" placeholder="如果后台启用了 Turnstile，在此填写调试 token" />
+        <label for="ts-token">Turnstile Token（调试用，可留空）</label>
+        <input id="ts-token" style="min-width:260px"
+               placeholder="如启用 Turnstile，可在此填写调试 token；正式环境请用前端小组件。" />
       </div>
       <div id="login-msg" class="msg"></div>
     </div>
 
-    <!-- 桶列表 -->
-    <div class="section">
+    <!-- 桶列表：登录后才显示 -->
+    <div class="section" id="sec-buckets">
       <div class="section-title">1. 当前桶列表</div>
       <div class="section-desc">
-        这里展示所有已配置的桶。刷新列表不需要登录，但删除操作需要管理员登录。
+        登录后可以查看所有已配置的桶，并执行删除等敏感操作。
       </div>
 
       <button class="small" id="btn-refresh">刷新列表</button>
@@ -188,18 +193,18 @@
           </tr>
         </thead>
         <tbody id="bucket-tbody">
-          <tr><td colspan="7" style="text-align:center;color:#9ca3af;">暂无数据</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:#9ca3af;">尚未加载</td></tr>
         </tbody>
       </table>
 
       <div id="bucket-msg" class="msg"></div>
     </div>
 
-    <!-- 创建桶 -->
-    <div class="section">
+    <!-- 创建桶：登录后才显示 -->
+    <div class="section" id="sec-create">
       <div class="section-title">2. 创建新桶</div>
       <div class="section-desc">
-        创建时需要管理员登录。最大容量单位为字节，例如 1073741824 约等于 1 GiB。
+        创建时需要管理员登录。最大容量单位为字节，例如 1073741824 ≈ 1 GiB。
       </div>
 
       <div class="field-row">
@@ -219,6 +224,35 @@
       </div>
       <div id="create-msg" class="msg"></div>
     </div>
+
+    <!-- Turnstile 配置：登录后才显示 -->
+    <div class="section" id="sec-turnstile">
+      <div class="section-title">3. Turnstile 人机验证配置</div>
+      <div class="section-desc">
+        在这里配置 Cloudflare Turnstile。配置会写入数据库（<code>turnstile_settings</code> 表），
+        不再需要手动编辑配置文件中的 site_key / secret_key。
+      </div>
+
+      <div class="field-row">
+        <label>
+          <input type="checkbox" id="ts-enabled" />
+          启用 Turnstile 验证
+        </label>
+      </div>
+      <div class="field-row">
+        <label for="ts-site">站点密钥 (site_key)</label>
+        <input id="ts-site" style="min-width:260px" placeholder="从 Cloudflare Turnstile 控制台复制" />
+      </div>
+      <div class="field-row">
+        <label for="ts-secret">密钥 (secret_key)</label>
+        <input id="ts-secret" type="password" style="min-width:260px" placeholder="不会回显，请妥善保存" />
+      </div>
+      <div class="field-row">
+        <button id="btn-ts-save">保存配置</button>
+        <span id="ts-hint" style="font-size:12px;color:#6b7280;margin-left:6px;"></span>
+      </div>
+      <div id="ts-msg" class="msg"></div>
+    </div>
   </div>
 
   <script>
@@ -231,6 +265,11 @@
     const bucketMsg = document.getElementById("bucket-msg");
     const createMsg = document.getElementById("create-msg");
     const listHint = document.getElementById("list-hint");
+    const secBuckets = document.getElementById("sec-buckets");
+    const secCreate = document.getElementById("sec-create");
+    const secTurnstile = document.getElementById("sec-turnstile");
+    const tsMsg = document.getElementById("ts-msg");
+    const tsHint = document.getElementById("ts-hint");
 
     function showMsg(el, type, text) {
       el.textContent = text;
@@ -276,32 +315,52 @@
           loggedIn = false;
           loginStatus.textContent = "未登录";
           loginStatus.className = "badge warn";
+          secBuckets.style.display = "none";
+          secCreate.style.display = "none";
+          secTurnstile.style.display = "none";
         } else {
           loggedIn = true;
           adminUser = user;
           adminPass = pass;
-          showMsg(loginMsg, "success", "登录成功，后续桶操作将使用该账号。");
+          showMsg(loginMsg, "success", "登录成功，已解锁后台管理功能。");
           loginStatus.textContent = "已登录";
           loginStatus.className = "badge ok";
-          // 登录成功后自动刷新一次列表
+
+          secBuckets.style.display = "block";
+          secCreate.style.display = "block";
+          secTurnstile.style.display = "block";
+
           loadBuckets();
+          loadTurnstileConfig();
         }
       } catch (err) {
         showMsg(loginMsg, "error", "登录请求失败：" + err);
         loggedIn = false;
         loginStatus.textContent = "未登录";
         loginStatus.className = "badge warn";
+        secBuckets.style.display = "none";
+        secCreate.style.display = "none";
+        secTurnstile.style.display = "none";
       }
     }
 
     async function loadBuckets() {
       clearMsg(bucketMsg);
-      listHint.textContent = "加载中...";
+      listHint.textContent = "";
+
+      if (!loggedIn) {
+        showMsg(bucketMsg, "error", "请先登录管理员账号。");
+        return;
+      }
+
       const tbody = document.getElementById("bucket-tbody");
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9ca3af;">加载中...</td></tr>';
+      listHint.textContent = "加载中...";
 
       try {
-        const res = await fetch("/api/buckets");
+        const res = await fetch("/api/buckets", {
+          headers: authHeaders(),
+        });
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok || !Array.isArray(json)) {
@@ -349,16 +408,11 @@
           const delBtn = document.createElement("button");
           delBtn.textContent = "删除";
           delBtn.className = "small danger";
-          if (!loggedIn) {
-            delBtn.disabled = true;
-            delBtn.title = "请先登录管理员账号";
-          } else {
-            delBtn.addEventListener("click", () => {
-              if (confirm("确定要删除该桶吗？此操作不可恢复。")) {
-                deleteBucket(b.id);
-              }
-            });
-          }
+          delBtn.addEventListener("click", () => {
+            if (confirm("确定要删除该桶吗？此操作不可恢复。")) {
+              deleteBucket(b.id);
+            }
+          });
           tdOps.appendChild(delBtn);
           tr.appendChild(tdOps);
 
@@ -402,7 +456,7 @@
         const headers = Object.assign(
           { "Content-Type": "application/json" },
           authHeaders(),
-          tsHeader()
+          tsHeader(),
         );
 
         const res = await fetch("/api/buckets", {
@@ -434,6 +488,11 @@
 
     async function deleteBucket(id) {
       clearMsg(bucketMsg);
+      if (!loggedIn) {
+        showMsg(bucketMsg, "error", "请先登录管理员账号。");
+        return;
+      }
+
       try {
         const headers = Object.assign({}, authHeaders(), tsHeader());
         const res = await fetch("/api/buckets/" + encodeURIComponent(id), {
@@ -453,15 +512,116 @@
       }
     }
 
-    document.getElementById("btn-login").addEventListener("click", login);
-    document.getElementById("btn-refresh").addEventListener("click", loadBuckets);
+    async function loadTurnstileConfig() {
+      clearMsg(tsMsg);
+      tsHint.textContent = "";
+
+      if (!loggedIn) {
+        showMsg(tsMsg, "error", "请先登录管理员账号。");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/admin/turnstile", {
+          headers: authHeaders(),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          showMsg(tsMsg, "error", json.error || "加载 Turnstile 配置失败。");
+          return;
+        }
+
+        const enabled = !!json.enabled;
+        const siteKey = json.site_key || "";
+        const hasSecret = !!json.has_secret;
+
+        document.getElementById("ts-enabled").checked = enabled;
+        document.getElementById("ts-site").value = siteKey;
+        document.getElementById("ts-secret").value = "";
+
+        if (hasSecret) {
+          tsHint.textContent = "已保存密钥，出于安全不会回显。如需更改，请重新填写密钥后保存。";
+        } else {
+          tsHint.textContent = "当前未设置密钥。";
+        }
+      } catch (err) {
+        showMsg(tsMsg, "error", "加载 Turnstile 配置失败：" + err);
+      }
+    }
+
+    async function saveTurnstileConfig() {
+      clearMsg(tsMsg);
+
+      if (!loggedIn) {
+        showMsg(tsMsg, "error", "请先登录管理员账号。");
+        return;
+      }
+
+      const enabled = document.getElementById("ts-enabled").checked;
+      const site = document.getElementById("ts-site").value.trim();
+      const secret = document.getElementById("ts-secret").value.trim();
+
+      if (enabled) {
+        if (!site || !secret) {
+          showMsg(tsMsg, "error", "启用 Turnstile 时必须填写站点密钥和密钥。");
+          return;
+        }
+      }
+
+      const payload = {
+        enabled: enabled,
+        site_key: site,
+        secret_key: secret,
+      };
+
+      const btn = document.getElementById("btn-ts-save");
+      btn.disabled = true;
+
+      try {
+        const headers = Object.assign(
+          { "Content-Type": "application/json" },
+          authHeaders(),
+        );
+
+        const res = await fetch("/api/admin/turnstile", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          showMsg(tsMsg, "error", json.error || "保存 Turnstile 配置失败。");
+        } else {
+          showMsg(tsMsg, "success", "保存成功。");
+          loadTurnstileConfig();
+        }
+      } catch (err) {
+        showMsg(tsMsg, "error", "保存 Turnstile 配置请求失败：" + err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById("btn-login").addEventListener("click", (e) => {
+      e.preventDefault();
+      login();
+    });
+    document.getElementById("btn-refresh").addEventListener("click", (e) => {
+      e.preventDefault();
+      loadBuckets();
+    });
     document.getElementById("btn-create").addEventListener("click", (e) => {
       e.preventDefault();
       createBucket();
     });
+    document.getElementById("btn-ts-save").addEventListener("click", (e) => {
+      e.preventDefault();
+      saveTurnstileConfig();
+    });
 
-    // 页面加载完，先尝试加载一次列表（即使未登录也可以看）
-    loadBuckets();
+    // 页面初始：仅展示登录区域，不加载桶列表 / Turnstile 配置
   </script>
 </body>
 </html>
