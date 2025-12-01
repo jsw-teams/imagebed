@@ -5,14 +5,11 @@
   <title>Imagebed 初始化安装</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       padding: 40px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
-        sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       background: #f4f4f5;
       color: #111827;
     }
@@ -21,7 +18,7 @@
       margin: 0 auto;
       background: #ffffff;
       border-radius: 12px;
-      padding: 32px 28px 28px;
+      padding: 28px 24px 24px;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     }
     h1 {
@@ -30,7 +27,7 @@
       letter-spacing: 0.03em;
     }
     .subtitle {
-      margin: 0 0 20px;
+      margin: 0 0 18px;
       font-size: 13px;
       color: #6b7280;
     }
@@ -38,16 +35,16 @@
       display: flex;
       align-items: center;
       font-size: 13px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
-    .step {
+    .step-pill {
       padding: 4px 10px;
       border-radius: 999px;
       border: 1px solid #e5e7eb;
       background: #f9fafb;
       color: #6b7280;
     }
-    .step.active {
+    .step-pill.active {
       background: #2563eb;
       border-color: #2563eb;
       color: #ffffff;
@@ -81,51 +78,6 @@
       font-size: 12px;
       color: #9ca3af;
     }
-    .actions {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    button {
-      padding: 9px 18px;
-      border-radius: 999px;
-      border: none;
-      background: #2563eb;
-      color: #ffffff;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    button[disabled] {
-      opacity: 0.6;
-      cursor: default;
-    }
-    button.secondary {
-      background: #6b7280;
-    }
-    .msg {
-      margin-top: 12px;
-      font-size: 13px;
-      display: none;
-    }
-    .msg.error {
-      color: #b91c1c;
-    }
-    .msg.success {
-      color: #15803d;
-    }
-    .top-links {
-      font-size: 12px;
-      margin-bottom: 16px;
-    }
-    .top-links a {
-      color: #2563eb;
-      text-decoration: none;
-      margin-right: 12px;
-    }
-    .top-links a:hover {
-      text-decoration: underline;
-    }
     .section-title {
       font-size: 15px;
       font-weight: 600;
@@ -137,31 +89,70 @@
       color: #6b7280;
       margin-bottom: 10px;
     }
-    .fade {
-      transition: opacity 0.18s ease;
+    .actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
     }
+    button {
+      padding: 9px 18px;
+      border-radius: 999px;
+      border: none;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    button[disabled] {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .msg {
+      margin-top: 10px;
+      font-size: 13px;
+      display: none;
+    }
+    .msg.error { color: #b91c1c; }
+    .msg.success { color: #15803d; }
+    .top-links {
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+    .top-links a {
+      color: #2563eb;
+      text-decoration: none;
+      margin-right: 12px;
+    }
+    .top-links a:hover { text-decoration: underline; }
+    .step-pane { display: none; }
+    .step-pane.active { display: block; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="top-links">
-      <a href="/upload/">返回上传页</a>
+      <a href="/upload/">前往上传页</a>
       <a href="/admin/">后台管理</a>
     </div>
     <h1>Imagebed 初始化安装</h1>
     <p class="subtitle">
       建议先完成数据库配置，测试通过后系统会自动建表并写入配置，
-      然后再设置管理员账号。R2 可在后台稍后配置。
+      然后再设置管理员账号。R2 及 Turnstile 可在后台单独配置。
     </p>
 
     <div class="steps">
-      <span class="step active" id="step1-pill">1. 配置数据库</span>
+      <span class="step-pill active" id="pill-step1">1. 配置数据库</span>
       <span class="sep">→</span>
-      <span class="step" id="step2-pill">2. 设置管理员</span>
+      <span class="step-pill" id="pill-step2">2. 设置管理员</span>
     </div>
 
-    <!-- Step 1: Database -->
-    <div id="step1" class="fade">
+    <!-- Step 1 -->
+    <div id="step1" class="step-pane active">
       <div class="section-title">步骤一：配置数据库</div>
       <p class="section-desc">
         只需填写数据库名称、用户和密码。系统默认连接
@@ -170,33 +161,17 @@
 
       <form id="db-form">
         <label for="db-name">数据库名称</label>
-        <input
-          id="db-name"
-          name="db_name"
-          placeholder="例如：imagebed"
-          autocomplete="off"
-        />
+        <input id="db-name" name="db_name" placeholder="例如：imagebed" autocomplete="off" />
         <div class="hint">
           会自动拼接为：
           <code>postgres://user:pass@127.0.0.1:5432/&lt;数据库名称&gt;?sslmode=disable</code>
         </div>
 
         <label for="db-user">数据库用户</label>
-        <input
-          id="db-user"
-          name="db_user"
-          placeholder="例如：imagebed"
-          autocomplete="off"
-        />
+        <input id="db-user" name="db_user" placeholder="例如：imagebed" autocomplete="off" />
 
         <label for="db-pass">数据库密码</label>
-        <input
-          id="db-pass"
-          name="db_password"
-          type="password"
-          placeholder="请输入该用户密码"
-          autocomplete="off"
-        />
+        <input id="db-pass" name="db_password" type="password" placeholder="请输入该用户密码" autocomplete="off" />
 
         <div class="actions">
           <button type="submit" id="db-submit">测试并保存数据库配置</button>
@@ -205,36 +180,24 @@
       </form>
     </div>
 
-    <!-- Step 2: Admin -->
-    <div id="step2" class="fade" style="display: none; opacity: 0.2;">
+    <!-- Step 2 -->
+    <div id="step2" class="step-pane">
       <div class="section-title">步骤二：设置管理员账号</div>
       <p class="section-desc">
-        数据库连接通过后，再设置后台登录的管理员账号。该账号会写入数据库
+        数据库连接通过后，再设置后台登录的管理员账号。该账号会写入
         <code>admins</code> 表。
       </p>
 
       <form id="admin-form">
         <label for="admin-user">管理员用户名</label>
-        <input
-          id="admin-user"
-          name="admin_username"
-          placeholder="例如：admin"
-          autocomplete="off"
-        />
+        <input id="admin-user" name="admin_username" placeholder="例如：admin" autocomplete="off" />
 
         <label for="admin-pass">管理员密码</label>
-        <input
-          id="admin-pass"
-          name="admin_password"
-          type="password"
-          placeholder="请设置一个强密码"
-          autocomplete="off"
-        />
+        <input id="admin-pass" name="admin_password" type="password" placeholder="请设置一个强密码" autocomplete="off" />
 
         <div class="actions">
-          <button type="submit" id="admin-submit" disabled>
-            完成安装
-          </button>
+          <button type="button" class="secondary" id="btn-back">返回上一步</button>
+          <button type="submit" id="admin-submit">完成安装</button>
         </div>
         <div id="admin-msg" class="msg"></div>
       </form>
@@ -242,21 +205,37 @@
   </div>
 
   <script>
-    const step1Pill = document.getElementById("step1-pill");
-    const step2Pill = document.getElementById("step2-pill");
-    const step2Block = document.getElementById("step2");
+    const pill1 = document.getElementById("pill-step1");
+    const pill2 = document.getElementById("pill-step2");
+    const step1 = document.getElementById("step1");
+    const step2 = document.getElementById("step2");
     const dbForm = document.getElementById("db-form");
-    const dbMsg = document.getElementById("db-msg");
     const adminForm = document.getElementById("admin-form");
+    const dbMsg = document.getElementById("db-msg");
     const adminMsg = document.getElementById("admin-msg");
     const adminSubmit = document.getElementById("admin-submit");
+    const btnBack = document.getElementById("btn-back");
+    const dbSubmit = document.getElementById("db-submit");
 
     let dbConfigured = false;
 
+    function showStep(n) {
+      if (n === 1) {
+        step1.classList.add("active");
+        step2.classList.remove("active");
+        pill1.classList.add("active");
+        pill2.classList.remove("active");
+      } else {
+        step1.classList.remove("active");
+        step2.classList.add("active");
+        pill1.classList.remove("active");
+        pill2.classList.add("active");
+      }
+    }
+
     function showMsg(el, type, text) {
       el.textContent = text;
-      el.classList.remove("error", "success");
-      el.classList.add(type === "error" ? "error" : "success");
+      el.className = "msg " + type;
       el.style.display = "block";
     }
 
@@ -273,15 +252,10 @@
         return;
       }
 
-      const payload = {
-        db_name: dbName,
-        db_user: dbUser,
-        db_password: dbPass,
-      };
+      const payload = { db_name: dbName, db_user: dbUser, db_password: dbPass };
 
-      const submitBtn = document.getElementById("db-submit");
-      submitBtn.disabled = true;
-      submitBtn.textContent = "测试中...";
+      dbSubmit.disabled = true;
+      dbSubmit.textContent = "测试中...";
 
       try {
         const res = await fetch("/api/setup/database", {
@@ -289,42 +263,32 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          const msg =
-            json.detail ||
-            json.error ||
-            "数据库测试或初始化失败，请检查配置。";
+          const msg = json.detail || json.error || "数据库测试或初始化失败，请检查配置。";
           showMsg(dbMsg, "error", msg);
           dbConfigured = false;
-          step2Block.style.opacity = 0.2;
-          step2Pill.classList.remove("active");
           adminSubmit.disabled = true;
         } else {
           dbConfigured = true;
-          showMsg(
-            dbMsg,
-            "success",
-            "数据库连接成功，表结构已初始化并写入配置。"
-          );
-          step2Block.style.display = "block";
-          step2Block.style.opacity = 1;
-          step2Pill.classList.add("active");
+          showMsg(dbMsg, "success", "数据库连接成功，表结构已初始化并写入配置。");
           adminSubmit.disabled = false;
-          step1Pill.classList.remove("active");
+          showStep(2); // 自动切换到第二步
         }
-      } catch (e) {
-        showMsg(dbMsg, "error", "请求失败：" + e);
+      } catch (err) {
+        showMsg(dbMsg, "error", "请求失败：" + err);
         dbConfigured = false;
-        step2Block.style.opacity = 0.2;
-        step2Pill.classList.remove("active");
         adminSubmit.disabled = true;
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "测试并保存数据库配置";
+        dbSubmit.disabled = false;
+        dbSubmit.textContent = "测试并保存数据库配置";
       }
+    });
+
+    btnBack.addEventListener("click", () => {
+      // 只是界面返回，不会撤销已经保存的数据库配置
+      showStep(1);
     });
 
     adminForm.addEventListener("submit", async (e) => {
@@ -337,19 +301,14 @@
       }
 
       const adminUser = document.getElementById("admin-user").value.trim();
-      const adminPass = document
-        .getElementById("admin-pass")
-        .value.trim();
+      const adminPass = document.getElementById("admin-pass").value.trim();
 
       if (!adminUser || !adminPass) {
         showMsg(adminMsg, "error", "管理员用户名和密码均不能为空。");
         return;
       }
 
-      const payload = {
-        admin_username: adminUser,
-        admin_password: adminPass,
-      };
+      const payload = { admin_username: adminUser, admin_password: adminPass };
 
       adminSubmit.disabled = true;
       adminSubmit.textContent = "正在完成安装...";
@@ -360,27 +319,19 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          const msg =
-            json.detail ||
-            json.error ||
-            "创建管理员账号失败，请检查日志。";
+          const msg = json.detail || json.error || "创建管理员账号失败，请检查日志。";
           showMsg(adminMsg, "error", msg);
         } else {
-          showMsg(
-            adminMsg,
-            "success",
-            "安装完成！现在可以前往 /upload 上传图片，或前往 /admin 管理桶。"
-          );
+          showMsg(adminMsg, "success", "安装完成！即将跳转到上传页面。");
           setTimeout(() => {
             window.location.href = "/upload/";
           }, 2000);
         }
-      } catch (e) {
-        showMsg(adminMsg, "error", "请求失败：" + e);
+      } catch (err) {
+        showMsg(adminMsg, "error", "请求失败：" + err);
       } finally {
         adminSubmit.disabled = false;
         adminSubmit.textContent = "完成安装";
