@@ -20,7 +20,6 @@ type R2Config struct {
 	SecretAccessKey string `json:"secret_access_key"`
 	Region          string `json:"region"`            // "auto" or "eu" 等
 	Endpoint        string `json:"endpoint"`          // 可选，自定义 endpoint，高级用法
-	PublicBaseURL   string `json:"public_base_url"`   // 可选，对外访问前缀
 }
 
 type TurnstileConfig struct {
