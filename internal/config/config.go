@@ -28,7 +28,8 @@ type R2Config struct {
 }
 
 // TurnstileConfig Turnstile 基础配置。
-// 现在 site_key/secret_key 已经移到数据库里，这里只保留一个开关和可选的后端 secret。
+// site_key / secret_key 的最终生效配置已经迁移到数据库中，
+// 这里只保留一个开关和可选的后端 secret 以兼容旧结构。
 type TurnstileConfig struct {
 	Enabled   bool   `json:"enabled"`
 	SecretKey string `json:"secret_key"`
@@ -48,6 +49,8 @@ type AppConfig struct {
 }
 
 // Config 总配置。
+// 注意：Installed 用于标记系统是否已经完成初始化安装，
+// router.go 会用它来决定是否强制跳转 /setup。
 type Config struct {
 	HTTP       HTTPConfig       `json:"http"`
 	Database   DatabaseConfig   `json:"database"`
@@ -55,6 +58,8 @@ type Config struct {
 	Turnstile  TurnstileConfig  `json:"turnstile"`
 	Moderation ModerationConfig `json:"moderation"`
 	App        AppConfig        `json:"app"`
+
+	Installed bool `json:"installed"` // 是否已完成初始化安装
 }
 
 const (
@@ -95,6 +100,7 @@ func Default() *Config {
 				"image/webp",
 			},
 		},
+		Installed: false,
 	}
 }
 
@@ -169,7 +175,7 @@ func Load(path string) (*Config, error) {
 func writeConfigFile(path string, cfg *Config) error {
 	buf, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshal default config: %w", err)
+		return fmt.Errorf("marshal config: %w", err)
 	}
 	if err := os.WriteFile(path, buf, 0o640); err != nil {
 		return fmt.Errorf("write config: %w", err)
@@ -177,7 +183,19 @@ func writeConfigFile(path string, cfg *Config) error {
 	return nil
 }
 
-// MustLoad 是一个方便函数，失败时直接 panic / log fatal。
+// Save 用于把当前配置写回到磁盘（例如初始化安装完成后）。
+// router.go 会在 /setup 完成时调用它。
+func Save(path string, cfg *Config) error {
+	if path == "" {
+		return fmt.Errorf("empty config path")
+	}
+	if cfg == nil {
+		return fmt.Errorf("nil config")
+	}
+	return writeConfigFile(path, cfg)
+}
+
+// MustLoad 是一个方便函数，失败时直接 panic。
 func MustLoad(path string) *Config {
 	cfg, err := Load(path)
 	if err != nil {
