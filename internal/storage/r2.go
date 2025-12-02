@@ -15,7 +15,7 @@ import (
 )
 
 // R2Client 封装 Cloudflare R2 的 S3 兼容客户端。
-// publicBaseURL 现在完全从 endpoint 推导出来，不再依赖配置里的 public_base_url。
+// publicBaseURL 现在从 endpoint 推导出来，不再依赖配置里的 public_base_url。
 type R2Client struct {
 	s3            *s3.Client
 	accountID     string
@@ -57,11 +57,10 @@ func NewR2Client(ctx context.Context, cfg config.R2Config) (*R2Client, error) {
 		o.UsePathStyle = true
 	})
 
-	// 不再从 cfg.PublicBaseURL 读取，而是直接使用 endpoint 作为公共前缀
 	return &R2Client{
 		s3:            client,
 		accountID:     cfg.AccountID,
-		publicBaseURL: endpoint,
+		publicBaseURL: endpoint, // 直接用 endpoint 作为公共前缀
 	}, nil
 }
 
@@ -95,12 +94,11 @@ func (c *R2Client) PutObject(
 	return err
 }
 
-// PublicURL 生成 R2 对象的直链 URL：
+// PublicURL 生成 R2 对象直链：
 // 非欧盟：https://<account_id>.r2.cloudflarestorage.com/<bucket>/<key>
 // 欧盟： https://<account_id>.eu.r2.cloudflarestorage.com/<bucket>/<key>
 //
-// 注意：上传页已经改成用 当前域名 + /i/{id} 生成最终对外 URL，
-// 这个函数主要用于后台调试 / 管理用途。
+// 外部给用户看的链接已经改为 “当前域名 + /i/{id}”，所以这里只是调试 / 管理用。
 func (c *R2Client) PublicURL(bucket, key string) string {
 	return fmt.Sprintf("%s/%s/%s", c.publicBaseURL, bucket, key)
 }
