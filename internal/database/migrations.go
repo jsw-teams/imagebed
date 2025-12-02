@@ -10,6 +10,9 @@ import (
 // ddlInit 定义初始数据库结构（相当于原来的 migrations/0001_init.sql）
 // 注意：这里都用了 IF NOT EXISTS，重复执行也不会报错。
 const ddlInit = `
+-- 启用 pgcrypto 扩展，以便使用 gen_random_uuid() 生成 UUID。
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- buckets: 管理 R2 桶配置和配额
 CREATE TABLE IF NOT EXISTS buckets (
     id            UUID PRIMARY KEY,
@@ -38,7 +41,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_images_bucket_object_key
 
 -- admins: 管理员账号，用于后台登录 / 管理
 CREATE TABLE IF NOT EXISTS admins (
-    id            UUID PRIMARY KEY,
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
