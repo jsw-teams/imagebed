@@ -14,6 +14,8 @@ import (
 	"github.com/jsw-teams/imagebed/internal/config"
 )
 
+// R2Client 封装 Cloudflare R2 的 S3 兼容客户端。
+// publicBaseURL 现在完全从 endpoint 推导出来，不再依赖配置里的 public_base_url。
 type R2Client struct {
 	s3            *s3.Client
 	accountID     string
@@ -36,11 +38,15 @@ func NewR2Client(ctx context.Context, cfg config.R2Config) (*R2Client, error) {
 		return nil, fmt.Errorf("load aws config: %w", err)
 	}
 
+	// 计算 endpoint：
+	// 非欧盟：https://<account_id>.r2.cloudflarestorage.com
+	// 欧盟： https://<account_id>.eu.r2.cloudflarestorage.com
 	endpoint := cfg.Endpoint
 	if endpoint == "" {
 		host := fmt.Sprintf("%s.r2.cloudflarestorage.com", cfg.AccountID)
-		// 欧盟区域：<account_id>.eu.r2.cloudflarestorage.com
-		if strings.EqualFold(region, "eu") || strings.EqualFold(region, "eu-auto") || strings.EqualFold(region, "europe") {
+		if strings.EqualFold(region, "eu") ||
+			strings.EqualFold(region, "eu-auto") ||
+			strings.EqualFold(region, "europe") {
 			host = fmt.Sprintf("%s.eu.r2.cloudflarestorage.com", cfg.AccountID)
 		}
 		endpoint = "https://" + host
@@ -51,15 +57,11 @@ func NewR2Client(ctx context.Context, cfg config.R2Config) (*R2Client, error) {
 		o.UsePathStyle = true
 	})
 
-	publicBase := cfg.PublicBaseURL
-	if publicBase == "" {
-		publicBase = endpoint
-	}
-
+	// 不再从 cfg.PublicBaseURL 读取，而是直接使用 endpoint 作为公共前缀
 	return &R2Client{
 		s3:            client,
 		accountID:     cfg.AccountID,
-		publicBaseURL: publicBase,
+		publicBaseURL: endpoint,
 	}, nil
 }
 
@@ -93,9 +95,12 @@ func (c *R2Client) PutObject(
 	return err
 }
 
-// PublicURL 生成公共访问 URL：
+// PublicURL 生成 R2 对象的直链 URL：
 // 非欧盟：https://<account_id>.r2.cloudflarestorage.com/<bucket>/<key>
 // 欧盟： https://<account_id>.eu.r2.cloudflarestorage.com/<bucket>/<key>
+//
+// 注意：上传页已经改成用 当前域名 + /i/{id} 生成最终对外 URL，
+// 这个函数主要用于后台调试 / 管理用途。
 func (c *R2Client) PublicURL(bucket, key string) string {
 	return fmt.Sprintf("%s/%s/%s", c.publicBaseURL, bucket, key)
 }
