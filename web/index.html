@@ -2,286 +2,16 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 图床 · 上传</title>
+  <title>Imagebed 图床上传 | Cloudflare R2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
-        "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft Yahei", sans-serif;
-      background: radial-gradient(circle at top left, #eef3ff, #f7f8fc 45%, #fdfdfd 100%);
-      color: #1f2933;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 16px;
-    }
-    .shell {
-      width: 100%;
-      max-width: 720px;
-      background: rgba(255, 255, 255, 0.96);
-      border-radius: 24px;
-      box-shadow: 0 22px 45px rgba(15, 35, 95, 0.08);
-      padding: 24px 28px 26px;
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(226, 232, 255, 0.9);
-    }
-
-    .header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .brand-logo {
-      width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #4f8cff, #7b5cff);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 17px;
-      font-weight: 700;
-      box-shadow: 0 10px 20px rgba(79, 140, 255, 0.35);
-    }
-    .brand-text-main {
-      font-size: 18px;
-      font-weight: 650;
-      letter-spacing: 0.02em;
-    }
-    .brand-text-sub {
-      font-size: 13px;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-    }
-    .header-link {
-      padding: 5px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      color: #4b5563;
-      text-decoration: none;
-      background: rgba(248, 250, 252, 0.95);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .header-link:hover {
-      background: #e5edff;
-      border-color: #c7d2fe;
-      color: #1f2937;
-    }
-
-    .upload-card {
-      border-radius: 22px;
-      padding: 18px 18px 20px;
-      background: linear-gradient(
-        180deg,
-        rgba(248, 250, 255, 0.96),
-        rgba(244, 246, 252, 0.96)
-      );
-      border: 1px solid rgba(216, 227, 255, 0.95);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7),
-        0 16px 32px rgba(15, 35, 95, 0.04);
-    }
-
-    .section-title {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .section-sub {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 12px;
-    }
-
-    .dropzone {
-      margin-top: 8px;
-      border-radius: 18px;
-      border: 1px dashed rgba(148, 163, 184, 0.9);
-      background: rgba(255, 255, 255, 0.95);
-      min-height: 180px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 18px 14px;
-      cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease,
-        transform 0.08s ease;
-    }
-    .dropzone:hover {
-      border-color: #4f46e5;
-      background: #f5f7ff;
-      transform: translateY(-1px);
-    }
-    .dropzone-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 999px;
-      background: rgba(79, 140, 255, 0.09);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #4f46e5;
-      margin-bottom: 8px;
-      font-size: 22px;
-    }
-    .dropzone-title {
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 4px;
-      color: #111827;
-    }
-    .dropzone-sub {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 12px;
-    }
-
-    .btn-choose {
-      padding: 7px 16px;
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      box-shadow: 0 8px 16px rgba(79, 70, 229, 0.28);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-choose:hover {
-      filter: brightness(1.04);
-      transform: translateY(-0.5px);
-    }
-
-    .file-name {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #6b7280;
-      max-width: 100%;
-      word-break: break-all;
-    }
-
-    .btn-upload {
-      margin-top: 18px;
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(90deg, #2563eb, #4f46e5);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .btn-upload:disabled {
-      opacity: 0.6;
-      cursor: default;
-      box-shadow: none;
-    }
-
-    .status-line {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #6b7280;
-      min-height: 17px;
-    }
-    .status-line strong {
-      color: #111827;
-    }
-
-    .result-box {
-      margin-top: 12px;
-      padding: 10px 10px 9px;
-      border-radius: 14px;
-      border: 1px solid rgba(191, 219, 254, 0.9);
-      background: #eff6ff;
-      font-size: 12px;
-    }
-    .result-label {
-      color: #1d4ed8;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-    .result-url-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .result-input {
-      flex: 1;
-      padding: 6px 8px;
-      border-radius: 9px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      font-size: 12px;
-      background: white;
-      color: #111827;
-    }
-    .btn-copy {
-      padding: 6px 9px;
-      border-radius: 999px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-size: 11px;
-      cursor: pointer;
-    }
-    .btn-copy:hover {
-      filter: brightness(1.05);
-    }
-
-    input[type="file"] {
-      display: none;
-    }
-
-    @media (max-width: 640px) {
-      .shell {
-        padding: 18px 14px 20px;
-        border-radius: 18px;
-      }
-      .header-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-      }
-      .header-right {
-        align-self: stretch;
-        justify-content: space-between;
-      }
-    }
-  </style>
+  <meta name="description" content="使用 Imagebed 图床将图片上传到 Cloudflare R2，一键生成可公开访问的链接，支持 PNG、JPG、GIF、WebP 等格式。" />
+  <meta name="keywords" content="图床, Imagebed, 图片上传, Cloudflare R2, 外链图片" />
+  <meta name="robots" content="index,follow" />
+  <meta property="og:title" content="Imagebed 图床 · 上传" />
+  <meta property="og:description" content="选择图片，一键上传，获取稳定的公开访问链接。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="zh_CN" />
+  <link rel="stylesheet" href="index.css" />
 </head>
 <body>
   <div class="shell">
@@ -290,7 +20,7 @@
         <div class="brand-logo">Ib</div>
         <div>
           <div class="brand-text-main">Imagebed 图床 · 上传</div>
-          <div class="brand-text-sub">选择图片，一键上传，获取可公开访问的链接。</div>
+          <div class="brand-text-sub">选择图片，生成可公开访问的链接。</div>
         </div>
       </div>
       <div class="header-right">
@@ -310,13 +40,11 @@
         <div class="file-name" id="file-name">尚未选择图片</div>
       </div>
 
-      <button class="btn-upload" id="btn-upload">
-        开始上传
-      </button>
+      <button class="btn-upload" id="btn-upload">开始上传</button>
 
       <div class="status-line" id="status-text"></div>
 
-      <div class="result-box" id="result-box" style="display: none;">
+      <div class="result-box" id="result-box" style="display:none;">
         <div class="result-label">图片访问链接</div>
         <div class="result-url-row">
           <input id="result-url" class="result-input" readonly />
@@ -328,105 +56,6 @@
 
   <input type="file" id="file-input" accept="image/*" />
 
-  <script>
-    const fileInput = document.getElementById("file-input");
-    const dropzone = document.getElementById("dropzone");
-    const btnChoose = document.getElementById("btn-choose");
-    const btnUpload = document.getElementById("btn-upload");
-    const fileNameEl = document.getElementById("file-name");
-    const statusText = document.getElementById("status-text");
-    const resultBox = document.getElementById("result-box");
-    const resultUrl = document.getElementById("result-url");
-    const btnCopy = document.getElementById("btn-copy");
-
-    function setStatus(msg) {
-      statusText.textContent = msg || "";
-    }
-
-    function handleFiles(files) {
-      if (!files || !files.length) return;
-      const f = files[0];
-      fileInput.files = files;
-      fileNameEl.textContent = f.name + " · " + Math.round(f.size / 1024) + " KB";
-      resultBox.style.display = "none";
-      setStatus("");
-    }
-
-    btnChoose.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
-
-    dropzone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      dropzone.style.borderColor = "#4f46e5";
-      dropzone.style.background = "#eef2ff";
-    });
-    dropzone.addEventListener("dragleave", (e) => {
-      e.preventDefault();
-      dropzone.style.borderColor = "rgba(148,163,184,0.9)";
-      dropzone.style.background = "rgba(255,255,255,0.95)";
-    });
-    dropzone.addEventListener("drop", (e) => {
-      e.preventDefault();
-      dropzone.style.borderColor = "rgba(148,163,184,0.9)";
-      dropzone.style.background = "rgba(255,255,255,0.95)";
-      handleFiles(e.dataTransfer.files);
-    });
-
-    btnUpload.addEventListener("click", async () => {
-      const files = fileInput.files;
-      if (!files || !files.length) {
-        setStatus("请先选择一张图片。");
-        return;
-      }
-
-      const form = new FormData();
-      form.append("file", files[0]);
-      // 如果以后启用 Turnstile，可以在这里 append turnstile_token。
-
-      btnUpload.disabled = true;
-      setStatus("正在上传，请稍候…");
-
-      try {
-        const resp = await fetch("/api/upload", {
-          method: "POST",
-          body: form,
-        });
-
-        const data = await resp.json().catch(() => ({}));
-
-        if (!resp.ok) {
-          throw new Error(data.error || resp.statusText || "上传失败");
-        }
-
-        const id = data.id || data.image_id || data.imageID;
-        if (!id) {
-          throw new Error("后端没有返回图片 ID。");
-        }
-
-        const url = `${location.protocol}//${location.host}/i/${id}`;
-        resultUrl.value = url;
-        resultBox.style.display = "block";
-        setStatus("上传成功！");
-      } catch (err) {
-        resultBox.style.display = "none";
-        setStatus("上传失败：" + (err && err.message ? err.message : String(err)));
-      } finally {
-        btnUpload.disabled = false;
-      }
-    });
-
-    btnCopy.addEventListener("click", async () => {
-      const text = resultUrl.value;
-      if (!text) return;
-      try {
-        await navigator.clipboard.writeText(text);
-        setStatus("链接已复制到剪贴板。");
-      } catch {
-        resultUrl.select();
-        document.execCommand("copy");
-        setStatus("链接已复制（旧版方式）。");
-      }
-    });
-  </script>
+  <script src="index.js"></script>
 </body>
 </html>
