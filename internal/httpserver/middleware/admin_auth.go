@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,40 +13,17 @@ import (
 // 管理员登录状态的 Cookie 名称
 const adminSessionCookieName = "imagebed_admin_session"
 
-// 为了简单，这里只用一个固定值，后续如果要支持多用户/多端再扩展
+// 简单版本：只要 Cookie 为固定值，就视为已登录
 const adminSessionValue = "1"
-
-// SecurityHeaders 为所有响应附加一些基础安全头
-func SecurityHeaders() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		h := c.Writer.Header()
-		h.Set("X-Content-Type-Options", "nosniff")
-		h.Set("X-Frame-Options", "DENY")
-		h.Set("X-XSS-Protection", "1; mode=block")
-		// 可以按需再加 CSP 等
-		c.Next()
-	}
-}
-
-// RequireInstalled 用于保护 /api：未完成安装时返回错误
-func RequireInstalled(isInstalled func() bool) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !isInstalled() {
-			c.AbortWithStatusJSON(503, gin.H{
-				"error": "not_installed",
-			})
-			return
-		}
-		c.Next()
-	}
-}
 
 //
 // --------- 管理员登录 / 会话相关中间件 ---------
 //
 
-// HandleAdminSessionStatus 返回当前会话是否已登录管理员。
-// 前端可在 /admin 页面加载时调用 /api/admin/session。
+// HandleAdminSessionStatus
+// GET /api/admin/session
+// 返回当前会话是否已登录管理员。
+// 前端可在 /admin 页面加载时调用这个接口。
 func HandleAdminSessionStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		val, err := c.Cookie(adminSessionCookieName)
@@ -62,7 +40,9 @@ type adminLoginRequest struct {
 	Password string `json:"password"`
 }
 
-// HandleAdminLogin 处理 /api/admin/login：验证账号密码并写入 Cookie 会话。
+// HandleAdminLogin
+// POST /api/admin/login
+// 验证账号密码并写入 Cookie 会话。
 func HandleAdminLogin(getDB func() *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		db := getDB()
@@ -97,16 +77,15 @@ func HandleAdminLogin(getDB func() *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		// 登录成功：写入长期 Cookie（例如 30 天）
+		// 登录成功：写入长期 Cookie（例如 30 天）。
 		maxAge := int((30 * 24 * time.Hour).Seconds())
-		// domain 留空 = 当前域名；secure=false 方便本地测试，生产在 HTTPS + 反代下仍然安全
 		c.SetCookie(
 			adminSessionCookieName,
 			adminSessionValue,
 			maxAge,
 			"/",
 			"",
-			false, // secure
+			false, // secure: 本地调试用 false，生产在 HTTPS+反代下仍走加密通道
 			true,  // httpOnly
 		)
 
@@ -114,7 +93,9 @@ func HandleAdminLogin(getDB func() *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
-// HandleAdminLogout 清除管理员会话 Cookie。
+// HandleAdminLogout
+// POST /api/admin/logout
+// 清除管理员会话 Cookie。
 func HandleAdminLogout() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 设置 MaxAge<0 清 Cookie
@@ -131,7 +112,8 @@ func HandleAdminLogout() gin.HandlerFunc {
 	}
 }
 
-// AdminAuthRequired 保护后台接口：要求已登录管理员。
+// AdminAuthRequired
+// 用于保护后台 API：要求已登录管理员。
 func AdminAuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		val, err := c.Cookie(adminSessionCookieName)
@@ -143,8 +125,10 @@ func AdminAuthRequired() gin.HandlerFunc {
 	}
 }
 
-// AdminAuth 兼容旧代码的包装：保留原签名，但内部直接走 Cookie 校验。
+// AdminAuth
+// 兼容旧代码的包装：保留原签名，但内部直接走 Cookie 校验。
+// 现在不再依赖 DB 做每次请求的身份验证。
 func AdminAuth(getDB func() *pgxpool.Pool) gin.HandlerFunc {
-	_ = getDB // 目前不再需要 DB 做认证，但保留参数以兼容旧调用
+	_ = getDB // 为兼容保留参数，避免未使用警告
 	return AdminAuthRequired()
 }
