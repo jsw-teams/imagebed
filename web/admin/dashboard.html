@@ -664,7 +664,7 @@
           <div class="panel">
             <span>建议将「显示名称」与「R2 桶名」区别开来。配额以
               <strong>字节</strong> 为单位，前端仅做简单显示；真实写入值将原样发送给后端。</span>
-            <span class="small-muted">自动分桶策略由后端 <code>auto_bucket</code> 表控制。</span>
+            <span class="small-muted">自动分桶策略由后端 <code>auto_bucket</code> / 相关表控制。</span>
           </div>
 
           <div class="table-wrap">
@@ -685,7 +685,7 @@
             </table>
           </div>
 
-          <!-- 新建 / 编辑区域（轻量版，而不是弹窗，以免样式过重） -->
+          <!-- 新建 / 编辑区域 -->
           <div class="section-divider"></div>
           <div class="section-title-row">
             <div>新建 / 编辑存储桶</div>
@@ -728,8 +728,8 @@
           <div class="panel">
             <span>
               <strong>说明：</strong>启用前需先在 Cloudflare Turnstile 控制台创建站点，
-              获取 Site Key 与 Secret Key。启用时需要提供一次真实的测试 token，
-              系统会调用官方 <code>/siteverify</code> 接口校验。
+              获取 Site Key 与 Secret Key。启用时建议先提供一次真实的测试 token，
+              使用单独的「测试接口」验证密钥是否正确。
             </span>
           </div>
 
@@ -761,7 +761,7 @@
               <input id="ts-secret" class="input" placeholder="用于后端验证 token" />
             </div>
             <div class="field">
-              <label class="field-label" for="ts-token">测试 Token（仅在启用时必填）</label>
+              <label class="field-label" for="ts-token">测试 Token（启用前建议先测试）</label>
               <input id="ts-token" class="input" placeholder="从测试页面嵌入的 Turnstile 小组件获得" />
             </div>
           </div>
@@ -776,9 +776,10 @@
   </div>
 
   <script>
-    const API_ROOT = "/api";
+    const API_ROOT   = "/api";
     const ADMIN_ROOT = API_ROOT + "/admin";
-    const BUCKET_API = API_ROOT + "/buckets";
+    // 关键修正：桶管理实际路由在 /api/admin/buckets
+    const BUCKET_API = ADMIN_ROOT + "/buckets";
 
     const globalError = document.getElementById("global-error");
     const globalErrorText = document.getElementById("global-error-text");
@@ -837,7 +838,6 @@
         avatarCircle.textContent = username.charAt(0).toUpperCase();
         return true;
       } catch (e) {
-        // 无法检测会话，保守起见也跳回登录页
         window.location.href = "/admin/";
         return false;
       }
@@ -845,11 +845,10 @@
 
     btnLogout.addEventListener("click", async () => {
       try {
-        const resp = await fetch(ADMIN_ROOT + "/logout", {
+        await fetch(ADMIN_ROOT + "/logout", {
           method: "POST",
           credentials: "include"
         });
-        // 不管成功与否，都跳回登录页
       } catch (e) {
         // ignore
       }
@@ -909,12 +908,23 @@
     btnResetBucket.addEventListener("click", resetBucketForm);
     btnNewBucket.addEventListener("click", resetBucketForm);
 
+    function handleAuthError(status) {
+      if (status === 401 || status === 403) {
+        window.location.href = "/admin/";
+        return true;
+      }
+      return false;
+    }
+
     async function loadBuckets() {
       bucketTbody.innerHTML =
         '<tr><td colspan="6" style="text-align:center;color:#9ca3af;">正在加载…</td></tr>';
       try {
         const resp = await fetch(BUCKET_API, { credentials: "include" });
-        if (!resp.ok) throw new Error("status " + resp.status);
+        if (!resp.ok) {
+          if (handleAuthError(resp.status)) return;
+          throw new Error("status " + resp.status);
+        }
         const list = await resp.json();
         if (!Array.isArray(list) || list.length === 0) {
           bucketTbody.innerHTML =
@@ -946,7 +956,6 @@
           bucketTbody.appendChild(tr);
         });
 
-        // 绑定编辑/删除
         bucketTbody.querySelectorAll(".btn-edit").forEach(btn => {
           btn.addEventListener("click", () => {
             const id = btn.getAttribute("data-id");
@@ -983,6 +992,7 @@
           credentials: "include"
         });
         if (!resp.ok) {
+          if (handleAuthError(resp.status)) return;
           const text = await resp.text();
           alert("删除失败：" + text);
           return;
@@ -1033,6 +1043,7 @@
           body: JSON.stringify(payload)
         });
         if (!resp.ok) {
+          if (handleAuthError(resp.status)) return;
           const text = await resp.text();
           showError("保存失败：" + text);
           return;
@@ -1072,7 +1083,6 @@
       }
       if (siteKey != null) tsSite.value = siteKey;
       if (!hasSecret) {
-        // 如果没有 secret，就清空输入框，防止误以为已经有值
         tsSecret.value = "";
       }
       tsToken.value = "";
@@ -1089,6 +1099,7 @@
           credentials: "include"
         });
         if (!resp.ok) {
+          if (handleAuthError(resp.status)) return;
           showError("读取 Turnstile 配置失败：" + resp.status);
           return;
         }
@@ -1110,9 +1121,14 @@
       const secretKey = tsSecret.value.trim();
       const testToken = tsToken.value.trim();
 
+      // 启用时强烈建议先测试
       if (tsEnabled) {
-        if (!siteKey || !secretKey || !testToken) {
-          showError("启用 Turnstile 时，必须填写 Site Key、Secret Key 和一次真实测试 token。");
+        if (!siteKey || !secretKey) {
+          showError("启用 Turnstile 时，必须填写 Site Key 与 Secret Key。");
+          return;
+        }
+        if (!testToken) {
+          showError("启用前建议至少测试一次：请填写测试 Token。");
           return;
         }
       }
@@ -1120,6 +1136,26 @@
       try {
         btnSaveTs.disabled = true;
         btnSaveTs.textContent = "保存中…";
+
+        // 1) 如启用，则先调用测试接口验证 secret + token
+        if (tsEnabled) {
+          const testResp = await fetch(ADMIN_ROOT + "/turnstile/test", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              secret_key: secretKey,
+              test_token: testToken
+            })
+          });
+          const testData = await testResp.json().catch(() => ({}));
+          if (!testResp.ok) {
+            showError("测试失败：" + (testData.detail || testData.error || testResp.status));
+            return;
+          }
+        }
+
+        // 2) 测试通过后 / 或者未开启时，真正保存配置
         const resp = await fetch(ADMIN_ROOT + "/turnstile", {
           method: "POST",
           credentials: "include",
@@ -1127,8 +1163,7 @@
           body: JSON.stringify({
             enabled: tsEnabled,
             site_key: siteKey,
-            secret_key: secretKey,
-            test_token: testToken
+            secret_key: secretKey
           })
         });
         const data = await resp.json().catch(() => ({}));
