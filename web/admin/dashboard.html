@@ -4,14 +4,8 @@
   <meta charset="UTF-8" />
   <title>Imagebed 管理控制台</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="管理 Imagebed 存储桶与 Cloudflare Turnstile 配置。" />
-  <meta name="keywords" content="Imagebed, 图床后台, Cloudflare R2, Turnstile" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta property="og:title" content="Imagebed 管理控制台" />
-  <meta property="og:description" content="管理存储桶和人机验证配置。" />
-  <meta property="og:type" content="website" />
-  <meta property="og:locale" content="zh_CN" />
-  <link rel="stylesheet" href="dashboard.css" />
+  <meta name="description" content="Imagebed 图床管理控制台，用于管理 R2 存储桶与 Turnstile 配置。" />
+  <link rel="stylesheet" href="/admin/dashboard.css" />
 </head>
 <body>
   <div class="shell">
@@ -63,12 +57,12 @@
           <div id="global-error-text"></div>
         </div>
 
-        <!-- 存储桶管理 -->
+        <!-- 存储桶管理面板 -->
         <div id="panel-buckets">
           <div class="content-header">
             <div>
               <div class="content-title">存储桶管理</div>
-              <div class="content-sub">管理 Cloudflare R2 存储桶与配额。</div>
+              <div class="content-sub">新建 / 删除 R2 桶配置，并设置配额。</div>
             </div>
             <span class="tag-soft" id="bucket-count-tag">桶：0</span>
           </div>
@@ -79,8 +73,8 @@
           </div>
 
           <div class="panel">
-            <span>配额单位为 <strong>字节</strong>，原样写入后端。</span>
-            <span class="small-muted">自动分桶由后端配置控制。</span>
+            <span>配额单位为字节，原样写入后端。自动分桶由后端配置控制。</span>
+            <span class="small-muted">显示名称与 R2 桶名可区分设置。</span>
           </div>
 
           <div class="table-wrap">
@@ -128,22 +122,20 @@
           </div>
         </div>
 
-        <!-- Turnstile 设置 -->
+        <!-- Turnstile 面板 -->
         <div id="panel-turnstile" style="display:none;">
           <div class="content-header">
             <div>
               <div class="content-title">Turnstile 人机验证</div>
               <div class="content-sub">
-                配置 Turnstile 开关和 Key，上传页会按配置校验 token。
+                配置 Turnstile Site Key / Secret Key，启用后上传接口会校验 token。
               </div>
             </div>
             <span id="ts-status-tag" class="pill-small-bad">状态：未启用</span>
           </div>
 
           <div class="panel">
-            <span>
-              在 Cloudflare Turnstile 控制台创建站点，复制 Site Key 与 Secret Key 后在此保存。
-            </span>
+            <span>启用前请在 Cloudflare Turnstile 控制台创建站点并复制 Key。</span>
           </div>
 
           <div class="section-divider"></div>
@@ -171,12 +163,16 @@
             </div>
             <div class="field">
               <label class="field-label" for="ts-secret">Secret Key</label>
-              <input id="ts-secret" class="input" placeholder="仅后端使用" />
+              <input id="ts-secret" class="input" placeholder="用于后端验证 token" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="ts-token">测试 Token（启用前可选填）</label>
+              <input id="ts-token" class="input" placeholder="从测试页面获得" />
             </div>
           </div>
 
           <div class="toolbar" style="margin-top:2px;">
-            <button class="btn-primary" id="btn-save-ts">保存配置</button>
+            <button class="btn-primary" id="btn-save-ts">测试并保存配置</button>
             <button class="btn-secondary" id="btn-refresh-ts">重新读取配置</button>
           </div>
         </div>
@@ -184,6 +180,6 @@
     </main>
   </div>
 
-  <script src="dashboard.js"></script>
+  <script src="/admin/dashboard.js"></script>
 </body>
 </html>
