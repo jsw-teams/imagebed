@@ -2,16 +2,12 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 图床上传 | Cloudflare R2</title>
+  <title>Imagebed 图床 · 上传</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="使用 Imagebed 图床将图片上传到 Cloudflare R2，一键生成可公开访问的链接，支持 PNG、JPG、GIF、WebP 等格式。" />
-  <meta name="keywords" content="图床, Imagebed, 图片上传, Cloudflare R2, 外链图片" />
-  <meta name="robots" content="index,follow" />
-  <meta property="og:title" content="Imagebed 图床 · 上传" />
-  <meta property="og:description" content="选择图片，一键上传，获取稳定的公开访问链接。" />
-  <meta property="og:type" content="website" />
-  <meta property="og:locale" content="zh_CN" />
-  <link rel="stylesheet" href="index.css" />
+  <meta name="description" content="Imagebed 轻量图床，支持常见图片格式一键上传，生成可公开访问的图片链接。" />
+  <link rel="canonical" href="/" />
+  <link rel="stylesheet" href="/index.css" />
+  <script src="/index.js" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -20,7 +16,7 @@
         <div class="brand-logo">Ib</div>
         <div>
           <div class="brand-text-main">Imagebed 图床 · 上传</div>
-          <div class="brand-text-sub">选择图片，生成可公开访问的链接。</div>
+          <div class="brand-text-sub">选择图片，上传后获取外链地址。</div>
         </div>
       </div>
       <div class="header-right">
@@ -30,12 +26,12 @@
 
     <div class="upload-card">
       <div class="section-title">上传图片</div>
-      <div class="section-sub">支持常见图片格式（PNG / JPG / GIF / WebP 等）。</div>
+      <div class="section-sub">支持 PNG / JPG / GIF / WebP 等常见图片格式。</div>
 
       <div class="dropzone" id="dropzone">
         <div class="dropzone-icon">↑</div>
         <div class="dropzone-title">点击选择图片，或将图片拖拽到这里</div>
-        <div class="dropzone-sub">上传后会生成一个以当前域名开头的访问链接。</div>
+        <div class="dropzone-sub">上传完成后将生成以当前域名开头的访问链接。</div>
         <button class="btn-choose" id="btn-choose">选择图片</button>
         <div class="file-name" id="file-name">尚未选择图片</div>
       </div>
@@ -44,7 +40,7 @@
 
       <div class="status-line" id="status-text"></div>
 
-      <div class="result-box" id="result-box" style="display:none;">
+      <div class="result-box" id="result-box" style="display: none;">
         <div class="result-label">图片访问链接</div>
         <div class="result-url-row">
           <input id="result-url" class="result-input" readonly />
@@ -55,7 +51,5 @@
   </div>
 
   <input type="file" id="file-input" accept="image/*" />
-
-  <script src="index.js"></script>
 </body>
 </html>

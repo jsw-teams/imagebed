@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 后台登录</title>
+  <title>Imagebed 管理后台登录</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 图床后台登录页面，仅管理员访问。" />
+  <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="/admin/index.css" />
+  <script src="/admin/index.js" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -23,7 +24,7 @@
 
       <div class="title-block">
         <h1>管理员登录</h1>
-        <p>使用安装时设置的账号密码登录后台。</p>
+        <p>使用安装时设置的账号密码登录后台控制台。</p>
       </div>
     </div>
 
@@ -62,6 +63,12 @@
         />
       </div>
 
+      <!-- Turnstile 容器，只有启用时才会在 JS 中显示 / 渲染 -->
+      <div id="ts-wrap" style="display:none; margin-top:6px;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">人机验证</div>
+        <div id="ts-container"></div>
+      </div>
+
       <div class="actions-row">
         <button type="submit" id="btn-login" class="btn-primary">
           <span>登录后台</span>
@@ -69,9 +76,6 @@
         <button type="button" id="btn-clear" class="btn-ghost">清空</button>
       </div>
     </form>
-    </div>
   </div>
-
-  <script src="/admin/index.js"></script>
 </body>
 </html>

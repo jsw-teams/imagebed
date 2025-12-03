@@ -285,17 +285,21 @@ func (s *Server) buildEngine() {
 			}
 		}
 
-		// Turnstile 中间件（上传用）
+		// Turnstile 中间件（上传 & 登录用）
 		tsMiddleware := middleware.Turnstile(
 			func() *turnstile.Verifier { return s.GetVerifier() },
 			func() bool { return s.IsTurnstileEnabled() },
 		)
 
+		// 公共 Turnstile 配置（上传页 / 登录页用，不需要登录）
+		api.GET("/turnstile", s.handlePublicTurnstileConfig)
+
 		// ---------- 管理员登录相关（不加 AdminAuthRequired） ----------
 		adminOpen := api.Group("/admin")
 		{
 			adminOpen.GET("/session", middleware.HandleAdminSessionStatus())
-			adminOpen.POST("/login", middleware.HandleAdminLogin(s.getDB))
+			// 登录走 Turnstile 中间件，但仅在后台启用后才真正校验
+			adminOpen.POST("/login", tsMiddleware, middleware.HandleAdminLogin(s.getDB))
 			adminOpen.POST("/logout", middleware.HandleAdminLogout())
 		}
 
@@ -310,7 +314,7 @@ func (s *Server) buildEngine() {
 			adminSec.PUT("/buckets/:id", s.bucketHandler.UpdateBucket)
 			adminSec.DELETE("/buckets/:id", s.bucketHandler.DeleteBucket)
 
-			// Turnstile 配置
+			// Turnstile 配置（后台管理）
 			adminSec.GET("/turnstile", s.handleAdminGetTurnstile)
 			adminSec.POST("/turnstile", s.handleAdminUpdateTurnstile)
 			adminSec.POST("/turnstile/test", s.handleAdminTestTurnstile)
@@ -388,7 +392,8 @@ func (s *Server) GetVerifier() *turnstile.Verifier {
 	return s.verifier
 }
 
-// IsTurnstileEnabled Turnstile 启用状态来自数据库配置
+// IsTurnstileEnabled Turnstile 启用状态来自数据库配置 + 内存中的 verifier
+// 只有在后台配置完成并启用后，才会返回 true。
 func (s *Server) IsTurnstileEnabled() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -675,7 +680,7 @@ func (s *Server) handleAutoUpload(c *gin.Context) {
 }
 
 //
-// ---------- 后台 Turnstile 配置 API ----------
+// ---------- Turnstile 配置：公共查询 & 后台管理 ----------
 //
 
 type turnstileConfigResponse struct {
@@ -695,6 +700,44 @@ type testTurnstileRequest struct {
 	TestToken string `json:"test_token"`
 }
 
+// handlePublicTurnstileConfig：公共读取 Turnstile 配置（上传页 / 登录页用，不需要登录）
+func (s *Server) handlePublicTurnstileConfig(c *gin.Context) {
+	s.mu.RLock()
+	cfg := s.cfg
+	db := s.db
+	tsCfg := s.tsCfg
+	verifier := s.verifier
+	s.mu.RUnlock()
+
+	// 未安装或 DB 未就绪：统一视为未启用
+	if cfg == nil || !cfg.Installed || db == nil || tsCfg == nil {
+		c.JSON(http.StatusOK, turnstileConfigResponse{
+			Enabled:   false,
+			SiteKey:   "",
+			HasSecret: false,
+		})
+		return
+	}
+
+	enabled := tsCfg.Enabled && tsCfg.SiteKey != "" && tsCfg.SecretKey != "" && verifier != nil
+
+	if !enabled {
+		c.JSON(http.StatusOK, turnstileConfigResponse{
+			Enabled:   false,
+			SiteKey:   "",
+			HasSecret: tsCfg.SecretKey != "",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, turnstileConfigResponse{
+		Enabled:   true,
+		SiteKey:   tsCfg.SiteKey,
+		HasSecret: tsCfg.SecretKey != "",
+	})
+}
+
+// handleAdminGetTurnstile：后台读取 Turnstile 配置（需要管理员登录）
 func (s *Server) handleAdminGetTurnstile(c *gin.Context) {
 	s.mu.RLock()
 	cfg := s.cfg
