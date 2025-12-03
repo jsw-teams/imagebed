@@ -2,6 +2,10 @@ package web
 
 import "embed"
 
-// FS 是打包到 Go 二进制中的前端文件系统。
-//go:embed index.html setup/* admin/*
+// FS 内嵌前端静态资源：
+// - 根上传页：index.html / index.css / index.js
+// - 管理后台：admin 下所有文件
+// - 安装向导：setup 下所有文件
+//
+//go:embed index.html index.css index.js admin/* setup/*
 var FS embed.FS
