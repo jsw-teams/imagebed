@@ -154,6 +154,16 @@ func serveEmbeddedHTML(c *gin.Context, path string) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", data)
 }
 
+// 从 embed.FS 中读取静态资源（CSS / JS）并返回
+func serveEmbeddedAsset(c *gin.Context, path, contentType string) {
+	data, err := webui.FS.ReadFile(path)
+	if err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	c.Data(http.StatusOK, contentType, data)
+}
+
 // buildEngine 构建 gin.Engine 和所有路由
 func (s *Server) buildEngine() {
 	gin.SetMode(gin.ReleaseMode)
@@ -202,7 +212,7 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/admin")
 	})
 
-	// 管理后台 dashboard 页面（如果前端有 web/admin/dashboard.html）
+	// 管理后台 dashboard 页面
 	r.GET("/admin/dashboard", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -212,6 +222,40 @@ func (s *Server) buildEngine() {
 	})
 	r.GET("/admin/dashboard/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/admin/dashboard")
+	})
+
+	// ---------- 前端静态资源（CSS / JS） ----------
+
+	// 上传页资源
+	r.GET("/index.css", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "index.css", "text/css; charset=utf-8")
+	})
+	r.GET("/index.js", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "index.js", "application/javascript; charset=utf-8")
+	})
+
+	// 管理后台登录页资源
+	r.GET("/admin/index.css", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "admin/index.css", "text/css; charset=utf-8")
+	})
+	r.GET("/admin/index.js", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "admin/index.js", "application/javascript; charset=utf-8")
+	})
+
+	// 管理后台 dashboard 资源
+	r.GET("/admin/dashboard.css", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "admin/dashboard.css", "text/css; charset=utf-8")
+	})
+	r.GET("/admin/dashboard.js", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "admin/dashboard.js", "application/javascript; charset=utf-8")
+	})
+
+	// 安装向导资源
+	r.GET("/setup/index.css", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "setup/index.css", "text/css; charset=utf-8")
+	})
+	r.GET("/setup/index.js", func(c *gin.Context) {
+		serveEmbeddedAsset(c, "setup/index.js", "application/javascript; charset=utf-8")
 	})
 
 	// 健康检查（不依赖安装状态）
