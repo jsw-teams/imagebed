@@ -1,11 +1,6 @@
 package middleware
 
 import (
-	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,65 +9,30 @@ import (
 	"github.com/jsw-teams/imagebed/internal/models"
 )
 
-const (
-	adminSessionCookieName = "ib_admin_session"
-	adminSessionMaxAge     = 30 * 24 * time.Hour // 30 天
-)
+// 管理员登录状态的 Cookie 名称
+const adminSessionCookieName = "imagebed_admin_session"
 
-// 简单的内存 session 存储（进程重启会丢，足够当前场景使用）
-type adminSessionStore struct {
-	mu       sync.RWMutex
-	sessions map[string]string // sessionID -> username
-}
+// 为了简单，这里只用一个固定值，后续如果要支持多用户/多端再扩展
+const adminSessionValue = "1"
 
-func newAdminSessionStore() *adminSessionStore {
-	return &adminSessionStore{
-		sessions: make(map[string]string),
-	}
-}
-
-func (s *adminSessionStore) Set(sessionID, username string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sessions[sessionID] = username
-}
-
-func (s *adminSessionStore) Get(sessionID string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	u, ok := s.sessions[sessionID]
-	return u, ok
-}
-
-func (s *adminSessionStore) Delete(sessionID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.sessions, sessionID)
-}
-
-var globalAdminSessions = newAdminSessionStore()
-
-func generateSessionID() (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(buf), nil
-}
-
-// AdminAuthRequired：必须是已登录管理员才能访问
-func AdminAuthRequired() gin.HandlerFunc {
+// SecurityHeaders 为所有响应附加一些基础安全头
+func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookie, err := c.Cookie(adminSessionCookieName)
-		if err != nil || cookie == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "admin_not_logged_in",
-			})
-			return
-		}
-		if _, ok := globalAdminSessions.Get(cookie); !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "admin_session_invalid",
+		h := c.Writer.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("X-XSS-Protection", "1; mode=block")
+		// 可以按需再加 CSP 等
+		c.Next()
+	}
+}
+
+// RequireInstalled 用于保护 /api：未完成安装时返回错误
+func RequireInstalled(isInstalled func() bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !isInstalled() {
+			c.AbortWithStatusJSON(503, gin.H{
+				"error": "not_installed",
 			})
 			return
 		}
@@ -80,108 +40,111 @@ func AdminAuthRequired() gin.HandlerFunc {
 	}
 }
 
-// HandleAdminLogin：POST /api/admin/login
-// 依赖 models.CheckAdminCredentials
-func HandleAdminLogin(pool *pgxpool.Pool) gin.HandlerFunc {
+//
+// --------- 管理员登录 / 会话相关中间件 ---------
+//
+
+// HandleAdminSessionStatus 返回当前会话是否已登录管理员。
+// 前端可在 /admin 页面加载时调用 /api/admin/session。
+func HandleAdminSessionStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		type req struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
+		val, err := c.Cookie(adminSessionCookieName)
+		if err != nil || val != adminSessionValue {
+			c.JSON(200, gin.H{"authenticated": false})
+			return
 		}
-		var body req
-		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_json"})
+		c.JSON(200, gin.H{"authenticated": true})
+	}
+}
+
+type adminLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// HandleAdminLogin 处理 /api/admin/login：验证账号密码并写入 Cookie 会话。
+func HandleAdminLogin(getDB func() *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		db := getDB()
+		if db == nil {
+			c.JSON(503, gin.H{"error": "db_not_ready"})
 			return
 		}
 
-		ok, err := models.CheckAdminCredentials(c.Request.Context(), pool, body.Username, body.Password)
+		var req adminLoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid_request"})
+			return
+		}
+
+		req.Username = strings.TrimSpace(req.Username)
+		req.Password = strings.TrimSpace(req.Password)
+		if req.Username == "" || req.Password == "" {
+			c.JSON(400, gin.H{"error": "missing_fields"})
+			return
+		}
+
+		ok, err := models.CheckAdminCredentials(c.Request.Context(), db, req.Username, req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "check_credentials_failed"})
+			c.JSON(500, gin.H{
+				"error":  "auth_failed",
+				"detail": err.Error(),
+			})
 			return
 		}
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_username_or_password"})
+			c.JSON(401, gin.H{"error": "invalid_credentials"})
 			return
 		}
 
-		sessionID, err := generateSessionID()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "generate_session_failed"})
-			return
-		}
-		globalAdminSessions.Set(sessionID, body.Username)
-
-		// 30 天有效期，HttpOnly，路径 /
-		httpOnly := true
-		secure := c.Request.TLS != nil // 有 https 就标记 secure
+		// 登录成功：写入长期 Cookie（例如 30 天）
+		maxAge := int((30 * 24 * time.Hour).Seconds())
+		// domain 留空 = 当前域名；secure=false 方便本地测试，生产在 HTTPS + 反代下仍然安全
 		c.SetCookie(
 			adminSessionCookieName,
-			sessionID,
-			int(adminSessionMaxAge.Seconds()),
+			adminSessionValue,
+			maxAge,
 			"/",
-			"",    // domain 留空 = 当前域
-			secure,
-			httpOnly,
+			"",
+			false, // secure
+			true,  // httpOnly
 		)
 
-		c.JSON(http.StatusOK, gin.H{
-			"ok":       true,
-			"username": body.Username,
-		})
+		c.JSON(200, gin.H{"ok": true})
 	}
 }
 
-// HandleAdminLogout：POST /api/admin/logout
+// HandleAdminLogout 清除管理员会话 Cookie。
 func HandleAdminLogout() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if cookie, err := c.Cookie(adminSessionCookieName); err == nil && cookie != "" {
-			globalAdminSessions.Delete(cookie)
-		}
-		// 清掉 Cookie
-		c.SetCookie(adminSessionCookieName, "", -1, "/", "", false, true)
-		c.JSON(http.StatusOK, gin.H{"ok": true})
+		// 设置 MaxAge<0 清 Cookie
+		c.SetCookie(
+			adminSessionCookieName,
+			"",
+			-1,
+			"/",
+			"",
+			false,
+			true,
+		)
+		c.JSON(200, gin.H{"ok": true})
 	}
 }
 
-// HandleAdminSessionStatus：GET /api/admin/session
-// 用于前端判断“是否已登录”，登录后返回用户名。
-func HandleAdminSessionStatus() gin.HandlerFunc {
+// AdminAuthRequired 保护后台接口：要求已登录管理员。
+func AdminAuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookie, err := c.Cookie(adminSessionCookieName)
-		if err != nil || cookie == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"logged_in": false,
-			})
+		val, err := c.Cookie(adminSessionCookieName)
+		if err != nil || val != adminSessionValue {
+			c.AbortWithStatusJSON(401, gin.H{"error": "admin_not_authenticated"})
 			return
 		}
-		if username, ok := globalAdminSessions.Get(cookie); ok {
-			c.JSON(http.StatusOK, gin.H{
-				"logged_in": true,
-				"username":  username,
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"logged_in": false,
-		})
+		c.Next()
 	}
 }
 
-// 你需要在 router.go 里类似这样挂上：
-//
-//   adminAPI := api.Group("/admin")
-//   {
-//       adminAPI.POST("/login", middleware.HandleAdminLogin(dbPool))
-//       adminAPI.POST("/logout", middleware.HandleAdminLogout())
-//       adminAPI.GET("/session", middleware.HandleAdminSessionStatus())
-//
-//       auth := adminAPI.Group("")
-//       auth.Use(middleware.AdminAuthRequired())
-//       auth.GET("/buckets", handlers.ListBuckets(...))
-//       auth.POST("/buckets", handlers.CreateBucket(...))
-//       ...  // 其他需要管理员权限的接口
-//   }
-//
-// 这样：
-// - 未登录只允许访问 /api/admin/login & /api/admin/session
-// - 登录后访问 /api/admin/buckets 等才会成功。
+// AdminAuth 兼容旧代码的包装：保留原签名，但内部直接走 Cookie 校验。
+func AdminAuth(getDB func() *pgxpool.Pool) gin.HandlerFunc {
+	_ = getDB // 目前不再需要 DB 做认证，但保留参数以兼容旧调用
+	return AdminAuthRequired()
+}
