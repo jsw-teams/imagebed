@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imagebed 管理控制台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at top, #e0f2fe 0, #eef2ff 40%, #f9fafb 100%);
+      --card-bg: rgba(255, 255, 255, 0.98);
+      --primary: #2563eb;
+      --primary-deep: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --danger: #dc2626;
+      --danger-soft: #fee2e2;
+      --ok: #16a34a;
+      --border-soft: rgba(148, 163, 184, 0.35);
+      --shadow-soft: 0 22px 45px rgba(15, 23, 42, 0.13);
+      --radius-xl: 22px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --transition-fast: 150ms ease-out;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+    }
+
+    body {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .shell {
+      max-width: 1100px;
+      width: 100%;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(209,213,219,0.7);
+      box-shadow: 0 10px 25px rgba(15,23,42,0.12);
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: conic-gradient(from 210deg, #1d4ed8, #22c55e, #0ea5e9, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 17px;
+      box-shadow: 0 6px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .avatar-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .btn-ghost-small {
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      color: #4b5563;
+      font-size: 12px;
+      padding: 0 12px;
+      cursor: pointer;
+      transition: background-color var(--transition-fast), transform var(--transition-fast),
+                  border-color var(--transition-fast);
+    }
+
+    .btn-ghost-small:hover {
+      background: #f3f4f6;
+      transform: translateY(-0.5px);
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .side {
+      width: 230px;
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .side-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 4px;
+    }
+
+    .stat-card {
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(209,213,219,0.8);
+      background: #f9fafb;
+      padding: 10px 10px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 12px;
+    }
+
+    .stat-name {
+      color: var(--text-sub);
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .stat-tag {
+      font-size: 11px;
+      color: #059669;
+    }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .nav-item {
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      color: #4b5563;
+      transition: background-color var(--transition-fast), color var(--transition-fast),
+                  transform var(--transition-fast);
+    }
+
+    .nav-item span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-item.active {
+      background: var(--primary-soft);
+      color: var(--primary-deep);
+      transform: translateY(-1px);
+    }
+
+    .nav-item::after {
+      content: "›";
+      font-size: 11px;
+      opacity: 0.4;
+    }
+
+    .content {
+      flex: 1;
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 16px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .content-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .content-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .content-sub {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .tag-soft {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      margin-top: 4px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      height: 34px;
+      border-radius: 999px;
+      border: none;
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 10px 26px rgba(37, 99, 235, 0.45);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+                  filter var(--transition-fast), opacity var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+      box-shadow: 0 14px 32px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 7px 18px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-primary[disabled] {
+      opacity: 0.6;
+      box-shadow: none;
+      cursor: default;
+      transform: none;
+    }
+
+    .btn-secondary {
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 0 12px;
+      font-size: 12px;
+      background: #f9fafb;
+      color: #4b5563;
+      cursor: pointer;
+      transition: background-color var(--transition-fast), transform var(--transition-fast),
+                  border-color var(--transition-fast);
+    }
+
+    .btn-secondary:hover {
+      background: #f3f4f6;
+      transform: translateY(-0.5px);
+    }
+
+    .pill-small-ok {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .pill-small-bad {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .panel {
+      border-radius: var(--radius-lg);
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      padding: 10px 10px 9px;
+      font-size: 12px;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel span strong {
+      color: #111827;
+    }
+
+    .table-wrap {
+      margin-top: 6px;
+      border-radius: var(--radius-lg);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead {
+      background: #f9fafb;
+    }
+
+    th, td {
+      padding: 8px 8px;
+      text-align: left;
+      border-bottom: 1px solid #f1f5f9;
+      max-width: 220px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    th {
+      font-weight: 500;
+      color: #6b7280;
+    }
+
+    tbody tr:hover {
+      background: #f9fafb;
+    }
+
+    .td-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge-on {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .badge-off {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .error-box {
+      margin-top: 6px;
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-radius: var(--radius-md);
+      border: 1px solid #fecaca;
+      padding: 7px 9px;
+    }
+
+    .error-box.visible {
+      display: flex;
+    }
+
+    .error-dot {
+      margin-top: 2px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--danger);
+      flex-shrink: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      color: #4b5563;
+      font-weight: 500;
+    }
+
+    .field-label small {
+      color: #9ca3af;
+      font-weight: 400;
+    }
+
+    .input {
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 0 9px;
+      font-size: 12px;
+      background: #f9fafb;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+                  background-color var(--transition-fast);
+    }
+
+    .input:focus {
+      outline: none;
+      background: #ffffff;
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 1px #bfdbfe;
+    }
+
+    .input::placeholder {
+      color: #9ca3af;
+    }
+
+    .section-divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 8px 0;
+    }
+
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .toggle {
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toggle-knob {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #ffffff;
+      top: 2px;
+      left: 2px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.4);
+      transition: transform var(--transition-fast), background-color var(--transition-fast);
+    }
+
+    .toggle.on {
+      background: #22c55e;
+    }
+
+    .toggle.on .toggle-knob {
+      transform: translateX(16px);
+    }
+
+    .small-muted {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .pill-health {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .pill-health.bad {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    @media (max-width: 900px) {
+      .main {
+        flex-direction: column;
+      }
+      .side {
+        width: 100%;
+        order: 2;
+      }
+      .content {
+        order: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 10px;
+      }
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="top-bar">
+      <div class="brand-row">
+        <div class="logo">Ib</div>
+        <div>
+          <div class="brand-title">Imagebed 管理控制台</div>
+          <div class="brand-sub">用于管理存储桶、审核上传与 Turnstile 配置。</div>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="pill user-pill" id="user-pill">
+          <div class="avatar-circle" id="avatar-circle">A</div>
+          <span id="user-name">Admin</span>
+        </div>
+        <button class="btn-ghost-small" id="btn-to-upload">打开上传页</button>
+        <button class="btn-ghost-small" id="btn-logout">退出登录</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="side">
+        <div>
+          <div class="side-title">概览</div>
+          <div class="stat-card">
+            <div class="stat-name">运行状态</div>
+            <div class="stat-value" id="stat-health">未知</div>
+            <div class="stat-tag" id="stat-health-tag">正在检测 /healthz …</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="side-title" style="margin-top:2px;">导航</div>
+          <div class="nav-list">
+            <div class="nav-item active" data-panel="buckets">
+              <span>存储桶管理</span>
+            </div>
+            <div class="nav-item" data-panel="turnstile">
+              <span>Turnstile 人机验证</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="content">
+        <!-- 错误栏 -->
+        <div class="error-box" id="global-error">
+          <div class="error-dot"></div>
+          <div id="global-error-text"></div>
+        </div>
+
+        <!-- 存储桶管理面板 -->
+        <div id="panel-buckets">
+          <div class="content-header">
+            <div>
+              <div class="content-title">存储桶管理</div>
+              <div class="content-sub">用于创建 / 删除 R2 桶配置，并设置可用配额。</div>
+            </div>
+            <span class="tag-soft" id="bucket-count-tag">桶：0</span>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn-primary" id="btn-new-bucket">新建存储桶</button>
+            <button class="btn-secondary" id="btn-refresh-bucket">刷新列表</button>
+          </div>
+
+          <div class="panel">
+            <span>建议将「显示名称」与「R2 桶名」区别开来。配额以
+              <strong>字节</strong> 为单位，前端仅做简单显示；真实写入值将原样发送给后端。</span>
+            <span class="small-muted">自动分桶策略由后端 <code>auto_bucket</code> 表控制。</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>显示名称</th>
+                  <th>R2 桶名</th>
+                  <th>配额</th>
+                  <th>已用</th>
+                  <th>状态</th>
+                  <th style="width:140px;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="bucket-tbody">
+                <tr><td colspan="6" style="text-align:center;color:#9ca3af;">正在加载…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 新建 / 编辑区域（轻量版，而不是弹窗，以免样式过重） -->
+          <div class="section-divider"></div>
+          <div class="section-title-row">
+            <div>新建 / 编辑存储桶</div>
+            <span class="small-muted" id="bucket-form-mode">当前模式：新建</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label class="field-label" for="bf-name">显示名称</label>
+              <input id="bf-name" class="input" placeholder="例如：默认图床" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="bf-r2">R2 桶名 <small>Cloudflare R2 中的 Bucket 名称</small></label>
+              <input id="bf-r2" class="input" placeholder="例如：imgbed" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="bf-max">最大配额（字节）</label>
+              <input id="bf-max" class="input" placeholder="例如：1073741824（≈1GiB）" />
+            </div>
+          </div>
+
+          <div class="toolbar" style="margin-top:2px;">
+            <button class="btn-primary" id="btn-save-bucket">保存配置</button>
+            <button class="btn-secondary" id="btn-reset-bucket">重置表单</button>
+          </div>
+        </div>
+
+        <!-- Turnstile 面板 -->
+        <div id="panel-turnstile" style="display:none;">
+          <div class="content-header">
+            <div>
+              <div class="content-title">Turnstile 人机验证</div>
+              <div class="content-sub">
+                仅在这里配置 Turnstile。设置会写入 <code>turnstile_settings</code> 表，并影响前端上传页对 token 的校验。
+              </div>
+            </div>
+            <span id="ts-status-tag" class="pill-small-bad">状态：未启用</span>
+          </div>
+
+          <div class="panel">
+            <span>
+              <strong>说明：</strong>启用前需先在 Cloudflare Turnstile 控制台创建站点，
+              获取 Site Key 与 Secret Key。启用时需要提供一次真实的测试 token，
+              系统会调用官方 <code>/siteverify</code> 接口校验。
+            </span>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <div class="section-title-row">
+            <div>1. 启用开关</div>
+            <div class="toggle-row">
+              <div id="ts-toggle" class="toggle">
+                <div class="toggle-knob"></div>
+              </div>
+              <span class="small-muted" id="ts-toggle-text">当前：关闭</span>
+            </div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <div class="section-title-row">
+            <div>2. 填写 Key 信息</div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label class="field-label" for="ts-site">Site Key（站点密钥）</label>
+              <input id="ts-site" class="input" placeholder="从 Cloudflare Turnstile 控制台复制" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="ts-secret">Secret Key（秘密密钥，仅后端使用）</label>
+              <input id="ts-secret" class="input" placeholder="用于后端验证 token" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="ts-token">测试 Token（仅在启用时必填）</label>
+              <input id="ts-token" class="input" placeholder="从测试页面嵌入的 Turnstile 小组件获得" />
+            </div>
+          </div>
+
+          <div class="toolbar" style="margin-top:2px;">
+            <button class="btn-primary" id="btn-save-ts">测试并保存配置</button>
+            <button class="btn-secondary" id="btn-refresh-ts">重新读取配置</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const API_ROOT = "/api";
+    const ADMIN_ROOT = API_ROOT + "/admin";
+    const BUCKET_API = API_ROOT + "/buckets";
+
+    const globalError = document.getElementById("global-error");
+    const globalErrorText = document.getElementById("global-error-text");
+
+    function showError(msg) {
+      if (!msg) {
+        globalError.classList.remove("visible");
+        globalErrorText.textContent = "";
+        return;
+      }
+      globalError.classList.add("visible");
+      globalErrorText.textContent = msg;
+    }
+
+    function formatBytes(v) {
+      const n = Number(v || 0);
+      if (!Number.isFinite(n) || n <= 0) return "0 B";
+      const units = ["B","KiB","MiB","GiB","TiB"];
+      let i = 0, val = n;
+      while (val >= 1024 && i < units.length - 1) {
+        val /= 1024;
+        i++;
+      }
+      return val.toFixed(val >= 10 ? 0 : 1) + " " + units[i];
+    }
+
+    function setNavActive(id) {
+      document.querySelectorAll(".nav-item").forEach(el => {
+        el.classList.toggle("active", el.dataset.panel === id);
+      });
+      document.getElementById("panel-buckets").style.display =
+        id === "buckets" ? "block" : "none";
+      document.getElementById("panel-turnstile").style.display =
+        id === "turnstile" ? "block" : "none";
+    }
+
+    // --- 会话 & 顶部用户信息 ---
+    const userNameEl = document.getElementById("user-name");
+    const avatarCircle = document.getElementById("avatar-circle");
+    const btnLogout = document.getElementById("btn-logout");
+    const btnToUpload = document.getElementById("btn-to-upload");
+
+    async function ensureLoggedIn() {
+      try {
+        const resp = await fetch(ADMIN_ROOT + "/session", {
+          credentials: "include"
+        });
+        if (!resp.ok) throw new Error("session resp not ok");
+        const data = await resp.json().catch(() => ({}));
+        if (!data.logged_in) {
+          window.location.href = "/admin/";
+          return false;
+        }
+        const username = data.username || "Admin";
+        userNameEl.textContent = username;
+        avatarCircle.textContent = username.charAt(0).toUpperCase();
+        return true;
+      } catch (e) {
+        // 无法检测会话，保守起见也跳回登录页
+        window.location.href = "/admin/";
+        return false;
+      }
+    }
+
+    btnLogout.addEventListener("click", async () => {
+      try {
+        const resp = await fetch(ADMIN_ROOT + "/logout", {
+          method: "POST",
+          credentials: "include"
+        });
+        // 不管成功与否，都跳回登录页
+      } catch (e) {
+        // ignore
+      }
+      window.location.href = "/admin/";
+    });
+
+    btnToUpload.addEventListener("click", () => {
+      window.location.href = "/upload/";
+    });
+
+    // --- 健康检查 ---
+    const statHealth = document.getElementById("stat-health");
+    const statHealthTag = document.getElementById("stat-health-tag");
+
+    async function checkHealth() {
+      try {
+        const resp = await fetch(API_ROOT + "/healthz", { credentials: "include" });
+        if (!resp.ok) {
+          statHealth.textContent = "异常";
+          statHealthTag.textContent = "接口 /api/healthz 返回 " + resp.status;
+          statHealthTag.style.color = "#b91c1c";
+          return;
+        }
+        const data = await resp.json().catch(() => ({}));
+        statHealth.textContent = "正常运行";
+        statHealthTag.textContent = data.message || "后端服务正常响应。";
+        statHealthTag.style.color = "#22c55e";
+      } catch (e) {
+        statHealth.textContent = "异常";
+        statHealthTag.textContent = "无法请求 /api/healthz";
+        statHealthTag.style.color = "#b91c1c";
+      }
+    }
+
+    // --- 存储桶管理 ---
+    const bucketTbody = document.getElementById("bucket-tbody");
+    const bucketCountTag = document.getElementById("bucket-count-tag");
+    const btnRefreshBucket = document.getElementById("btn-refresh-bucket");
+    const btnNewBucket = document.getElementById("btn-new-bucket");
+    const btnSaveBucket = document.getElementById("btn-save-bucket");
+    const btnResetBucket = document.getElementById("btn-reset-bucket");
+    const bucketFormMode = document.getElementById("bucket-form-mode");
+    const bfName = document.getElementById("bf-name");
+    const bfR2 = document.getElementById("bf-r2");
+    const bfMax = document.getElementById("bf-max");
+
+    let editingBucketId = null;
+
+    function resetBucketForm() {
+      editingBucketId = null;
+      bfName.value = "";
+      bfR2.value = "";
+      bfMax.value = "";
+      bucketFormMode.textContent = "当前模式：新建";
+    }
+
+    btnResetBucket.addEventListener("click", resetBucketForm);
+    btnNewBucket.addEventListener("click", resetBucketForm);
+
+    async function loadBuckets() {
+      bucketTbody.innerHTML =
+        '<tr><td colspan="6" style="text-align:center;color:#9ca3af;">正在加载…</td></tr>';
+      try {
+        const resp = await fetch(BUCKET_API, { credentials: "include" });
+        if (!resp.ok) throw new Error("status " + resp.status);
+        const list = await resp.json();
+        if (!Array.isArray(list) || list.length === 0) {
+          bucketTbody.innerHTML =
+            '<tr><td colspan="6" style="text-align:center;color:#9ca3af;">暂无存储桶，请先新建一个。</td></tr>';
+          bucketCountTag.textContent = "桶：0";
+          return;
+        }
+        bucketCountTag.textContent = "桶：" + list.length;
+        bucketTbody.innerHTML = "";
+        list.forEach(b => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td title="${b.name || ""}">${b.name || "-"}</td>
+            <td title="${b.r2_bucket || ""}">${b.r2_bucket || "-"}</td>
+            <td>${formatBytes(b.max_bytes)}</td>
+            <td>${formatBytes(b.current_bytes)}</td>
+            <td>
+              ${
+                b.is_active
+                  ? '<span class="badge-on">启用</span>'
+                  : '<span class="badge-off">停用</span>'
+              }
+            </td>
+            <td class="td-actions">
+              <button class="btn-secondary btn-edit" data-id="${b.id || ""}">编辑</button>
+              <button class="btn-secondary btn-del" data-id="${b.id || ""}">删除</button>
+            </td>
+          `;
+          bucketTbody.appendChild(tr);
+        });
+
+        // 绑定编辑/删除
+        bucketTbody.querySelectorAll(".btn-edit").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            const row = list.find(x => x.id === id);
+            if (!row) return;
+            editingBucketId = id;
+            bfName.value = row.name || "";
+            bfR2.value = row.r2_bucket || "";
+            bfMax.value = row.max_bytes != null ? String(row.max_bytes) : "";
+            bucketFormMode.textContent = "当前模式：编辑（ID: " + id.slice(0,8) + "…）";
+          });
+        });
+
+        bucketTbody.querySelectorAll(".btn-del").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            if (!id) return;
+            if (!confirm("确定要删除该存储桶配置吗？此操作不会自动删除 R2 中真实的桶。")) {
+              return;
+            }
+            deleteBucket(id);
+          });
+        });
+      } catch (e) {
+        bucketTbody.innerHTML =
+          '<tr><td colspan="6" style="text-align:center;color:#b91c1c;">加载失败，请稍后重试。</td></tr>';
+      }
+    }
+
+    async function deleteBucket(id) {
+      try {
+        const resp = await fetch(BUCKET_API + "/" + encodeURIComponent(id), {
+          method: "DELETE",
+          credentials: "include"
+        });
+        if (!resp.ok) {
+          const text = await resp.text();
+          alert("删除失败：" + text);
+          return;
+        }
+        resetBucketForm();
+        loadBuckets();
+      } catch (e) {
+        alert("删除失败：" + e.message);
+      }
+    }
+
+    btnRefreshBucket.addEventListener("click", loadBuckets);
+
+    btnSaveBucket.addEventListener("click", async () => {
+      showError("");
+      const name = bfName.value.trim();
+      const r2 = bfR2.value.trim();
+      const max = bfMax.value.trim();
+      if (!name || !r2 || !max) {
+        showError("请完整填写显示名称、R2 桶名与配额。");
+        return;
+      }
+      const maxNum = Number(max);
+      if (!Number.isFinite(maxNum) || maxNum <= 0) {
+        showError("配额必须是一个大于 0 的数字（单位：字节）。");
+        return;
+      }
+
+      const payload = {
+        name,
+        r2_bucket: r2,
+        max_bytes: maxNum
+      };
+
+      try {
+        btnSaveBucket.disabled = true;
+        btnSaveBucket.textContent = "保存中…";
+        let url = BUCKET_API;
+        let method = "POST";
+        if (editingBucketId) {
+          url = BUCKET_API + "/" + encodeURIComponent(editingBucketId);
+          method = "PUT";
+        }
+        const resp = await fetch(url, {
+          method,
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+          const text = await resp.text();
+          showError("保存失败：" + text);
+          return;
+        }
+        resetBucketForm();
+        loadBuckets();
+      } catch (e) {
+        showError("保存失败：" + e.message);
+      } finally {
+        btnSaveBucket.disabled = false;
+        btnSaveBucket.textContent = "保存配置";
+      }
+    });
+
+    // --- Turnstile 设置 ---
+    const tsStatusTag = document.getElementById("ts-status-tag");
+    const tsToggle = document.getElementById("ts-toggle");
+    const tsToggleText = document.getElementById("ts-toggle-text");
+    const tsSite = document.getElementById("ts-site");
+    const tsSecret = document.getElementById("ts-secret");
+    const tsToken = document.getElementById("ts-token");
+    const btnSaveTs = document.getElementById("btn-save-ts");
+    const btnRefreshTs = document.getElementById("btn-refresh-ts");
+
+    let tsEnabled = false;
+
+    function applyTsUI(enabled, siteKey, hasSecret) {
+      tsEnabled = !!enabled;
+      tsToggle.classList.toggle("on", tsEnabled);
+      tsToggleText.textContent = "当前：" + (tsEnabled ? "已启用" : "关闭");
+      if (tsEnabled) {
+        tsStatusTag.textContent = "状态：已启用";
+        tsStatusTag.className = "pill-small-ok";
+      } else {
+        tsStatusTag.textContent = "状态：未启用";
+        tsStatusTag.className = "pill-small-bad";
+      }
+      if (siteKey != null) tsSite.value = siteKey;
+      if (!hasSecret) {
+        // 如果没有 secret，就清空输入框，防止误以为已经有值
+        tsSecret.value = "";
+      }
+      tsToken.value = "";
+    }
+
+    tsToggle.addEventListener("click", () => {
+      tsEnabled = !tsEnabled;
+      applyTsUI(tsEnabled, null, true);
+    });
+
+    async function loadTurnstile() {
+      try {
+        const resp = await fetch(ADMIN_ROOT + "/turnstile", {
+          credentials: "include"
+        });
+        if (!resp.ok) {
+          showError("读取 Turnstile 配置失败：" + resp.status);
+          return;
+        }
+        const data = await resp.json();
+        applyTsUI(!!data.enabled, data.site_key || "", !!data.has_secret);
+      } catch (e) {
+        showError("读取 Turnstile 配置失败：" + e.message);
+      }
+    }
+
+    btnRefreshTs.addEventListener("click", () => {
+      showError("");
+      loadTurnstile();
+    });
+
+    btnSaveTs.addEventListener("click", async () => {
+      showError("");
+      const siteKey = tsSite.value.trim();
+      const secretKey = tsSecret.value.trim();
+      const testToken = tsToken.value.trim();
+
+      if (tsEnabled) {
+        if (!siteKey || !secretKey || !testToken) {
+          showError("启用 Turnstile 时，必须填写 Site Key、Secret Key 和一次真实测试 token。");
+          return;
+        }
+      }
+
+      try {
+        btnSaveTs.disabled = true;
+        btnSaveTs.textContent = "保存中…";
+        const resp = await fetch(ADMIN_ROOT + "/turnstile", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enabled: tsEnabled,
+            site_key: siteKey,
+            secret_key: secretKey,
+            test_token: testToken
+          })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          showError("保存失败：" + (data.detail || data.error || resp.status));
+          return;
+        }
+        applyTsUI(!!data.enabled, data.site_key || "", !!data.has_secret);
+      } catch (e) {
+        showError("保存失败：" + e.message);
+      } finally {
+        btnSaveTs.disabled = false;
+        btnSaveTs.textContent = "测试并保存配置";
+      }
+    });
+
+    // --- 导航点击 ---
+    document.querySelectorAll(".nav-item").forEach(el => {
+      el.addEventListener("click", () => {
+        const id = el.dataset.panel;
+        setNavActive(id);
+      });
+    });
+
+    // ---- 页面初始化 ----
+    (async function init() {
+      const ok = await ensureLoggedIn();
+      if (!ok) return;
+      checkHealth();
+      loadBuckets();
+      loadTurnstile();
+    })();
+  </script>
+</body>
+</html>

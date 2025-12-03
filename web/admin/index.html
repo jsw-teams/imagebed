@@ -2,864 +2,578 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 后台管理</title>
+  <title>Imagebed 后台登录</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * { box-sizing: border-box; }
-    body {
+    :root {
+      --bg-gradient: radial-gradient(circle at top, #e0f2fe 0, #eef2ff 35%, #f9fafb 100%);
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --primary-deep: #1d4ed8;
+      --danger: #dc2626;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --border-soft: rgba(148, 163, 184, 0.35);
+      --shadow-soft: 0 22px 45px rgba(15, 23, 42, 0.13);
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --transition-fast: 150ms ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
       margin: 0;
-      min-height: 100vh;
-      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-      background: radial-gradient(circle at top, #eff6ff 0, #f9fafb 45%, #f3f4f6 100%);
-      color: #111827;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro SC",
+                   "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+    }
+
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 12px;
+      padding: 16px;
     }
+
     .shell {
       width: 100%;
-      max-width: 1080px;
-      background: rgba(255,255,255,0.97);
-      border-radius: 20px;
-      box-shadow: 0 22px 60px rgba(15,23,42,0.16);
-      padding: 22px 24px 22px;
-      display: grid;
-      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.3fr);
-      gap: 18px;
-    }
-    @media (max-width: 880px) {
-      .shell {
-        grid-template-columns: minmax(0, 1fr);
-        max-width: 520px;
-      }
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .logo {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-    .logo span { color: #2563eb; }
-    .header-links a {
-      font-size: 13px;
-      color: #6b7280;
-      text-decoration: none;
-      margin-left: 12px;
-    }
-    .header-links a:hover { color: #2563eb; }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 11px;
-      background: #eff6ff;
-      color: #2563eb;
-      gap: 4px;
-    }
-
-    .card {
-      border-radius: 16px;
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
-      padding: 12px 14px 14px;
-      margin-bottom: 10px;
-    }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .card-title {
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .card-desc {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 6px;
-    }
-
-    .field-row {
+      max-width: 480px;
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 24px 24px 20px;
       display: flex;
       flex-direction: column;
-      margin-top: 8px;
-    }
-    .field-row label {
-      font-size: 12px;
-      margin-bottom: 3px;
-      color: #4b5563;
-    }
-    .field-row input, .field-row select {
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
-      padding: 7px 9px;
-      font-size: 13px;
-      outline: none;
-    }
-    .field-row input:focus, .field-row select:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37,99,235,0.35);
+      gap: 20px;
     }
 
-    button {
-      border: none;
-      border-radius: 999px;
-      padding: 7px 14px;
-      font-size: 13px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    .btn-primary {
-      background: #2563eb;
-      color: #fff;
-    }
-    .btn-secondary {
-      background: #e5e7eb;
-      color: #111827;
-    }
-    .btn-danger {
-      background: #fee2e2;
-      color: #b91c1c;
-    }
-    button:disabled {
-      opacity: .6;
-      cursor: default;
-    }
-
-    .status-line {
-      margin-top: 6px;
-      font-size: 12px;
-      min-height: 16px;
-      color: #6b7280;
-    }
-    .status-line.error { color: #b91c1c; }
-    .status-line.success { color: #15803d; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      margin-top: 6px;
-    }
-    th, td {
-      border-bottom: 1px solid #e5e7eb;
-      padding: 4px 3px;
-      text-align: left;
-    }
-    th {
-      font-weight: 500;
-      color: #6b7280;
-      font-size: 11px;
-    }
-    td.actions { width: 1%; white-space: nowrap; }
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 2px 6px;
-      font-size: 11px;
-      background: #ecfdf3;
-      color: #16a34a;
-    }
-    .tag.off {
-      background: #fee2e2;
-      color: #b91c1c;
-    }
-
-    .login-shell {
-      max-width: 360px;
-      margin: 0 auto;
-      padding: 18px 16px 16px;
-      border-radius: 16px;
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
-    }
-    .login-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .login-desc {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 10px;
-    }
-
-    .switch-row {
+    .brand-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-top: 6px;
-      font-size: 12px;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
     }
-    .switch-row input[type="checkbox"] {
-      width: 34px;
-      height: 18px;
-      appearance: none;
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
       border-radius: 999px;
-      background: #e5e7eb;
-      position: relative;
-      outline: none;
-      cursor: pointer;
-      transition: background .18s;
+      background: conic-gradient(from 210deg, #1d4ed8, #22c55e, #0ea5e9, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 18px;
+      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.35);
     }
-    .switch-row input[type="checkbox"]::before {
-      content: "";
+
+    .brand-text-main {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .brand-text-sub {
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #6b7280;
+    }
+
+    .title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .title-block p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .input {
+      width: 100%;
+      height: 40px;
+      border-radius: var(--radius-md);
+      border: 1px solid #e5e7eb;
+      padding: 0 11px;
+      font-size: 14px;
+      color: var(--text-main);
+      background: #f9fafb;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+                  background-color var(--transition-fast);
+    }
+
+    .input::placeholder {
+      color: #9ca3af;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #93c5fd;
+      background: #ffffff;
+      box-shadow: 0 0 0 1px #bfdbfe;
+    }
+
+    .input-error {
+      border-color: rgba(220, 38, 38, 0.7);
+      box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.35);
+    }
+
+    .error-box {
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--danger);
+      background: #fef2f2;
+      border-radius: var(--radius-md);
+      border: 1px solid #fecaca;
+      padding: 7px 9px;
+    }
+
+    .error-box.visible {
+      display: flex;
+    }
+
+    .error-dot {
+      margin-top: 2px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--danger);
+      flex-shrink: 0;
+    }
+
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      height: 40px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+                  filter var(--transition-fast), opacity var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+      box-shadow: 0 18px 36px rgba(37, 99, 235, 0.48);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary[disabled] {
+      cursor: default;
+      opacity: 0.6;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-ghost {
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #4b5563;
+      font-size: 13px;
+      padding: 0 14px;
+      cursor: pointer;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast),
+                  color var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .btn-ghost:hover {
+      background: #f3f4f6;
+      transform: translateY(-0.5px);
+    }
+
+    .btn-ghost:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary-spinner {
       width: 14px;
       height: 14px;
       border-radius: 999px;
-      background: #ffffff;
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      transition: transform .18s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-    }
-    .switch-row input[type="checkbox"]:checked {
-      background: #2563eb;
-    }
-    .switch-row input[type="checkbox"]:checked::before {
-      transform: translateX(16px);
+      border: 2px solid rgba(239, 246, 255, 0.7);
+      border-top-color: #ffffff;
+      animation: spin 0.7s linear infinite;
     }
 
-    .hint {
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 8px;
       font-size: 11px;
-      color: #9ca3af;
+      color: var(--text-sub);
     }
-    .layout-right {
+
+    .footer-right {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.22);
+    }
+
+    .status-text {
+      font-size: 11px;
+    }
+
+    .link {
+      color: var(--primary);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      .shell {
+        padding: 18px 16px 14px;
+        border-radius: 18px;
+      }
+      .title-block h1 {
+        font-size: 18px;
+      }
     }
   </style>
 </head>
 <body>
-<div class="shell">
-  <!-- 左：登录视图 / 管理主视图 -->
-  <div>
-    <div class="header">
-      <div>
-        <div class="logo"><span>Imagebed</span> 后台管理</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px;">
-          用于配置存储桶与 Cloudflare Turnstile，只对管理员开放。
+  <div class="shell">
+    <div>
+      <div class="brand-row">
+        <div class="brand-left">
+          <div class="logo">Ib</div>
+          <div>
+            <div class="brand-text-main">Imagebed 后台管理</div>
+            <div class="brand-text-sub">仅管理员可访问，用于配置图床服务。</div>
+          </div>
         </div>
+        <span class="badge" id="badge-state">未登录</span>
       </div>
-      <div class="header-links">
-        <a href="/">返回首页</a>
-        <a href="/upload/">上传页面</a>
-        <a href="/setup/">初始化安装</a>
+
+      <div class="title-block">
+        <h1>管理员登录</h1>
+        <p>
+          使用安装时设置的管理员账号和密码登录。登录成功后将跳转到管理控制台，
+          可以创建 / 调整存储桶、配置 Cloudflare Turnstile 等。
+        </p>
       </div>
     </div>
 
-    <!-- 未登录：显示登录面板 -->
-    <div id="view-login" class="login-shell">
-      <div class="login-title">管理员登录</div>
-      <div class="login-desc">
-        请输入初始化时设置的管理员账号和密码。登录成功后即可管理存储桶与 Turnstile 配置。
-      </div>
-
-      <div class="field-row">
-        <label for="login-username">用户名</label>
-        <input id="login-username" placeholder="例如：admin" />
-      </div>
-      <div class="field-row">
-        <label for="login-password">密码</label>
-        <input id="login-password" type="password" placeholder="请输入密码" />
-      </div>
-
-      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
-        <button id="btn-login" class="btn-primary">登录后台</button>
-        <button id="btn-login-clear" class="btn-secondary">清空</button>
-      </div>
-
-      <div id="login-status" class="status-line"></div>
-      <div class="hint">
-        如果忘记管理员密码，只能通过删除数据库和配置后重新走初始化安装来重置。
-      </div>
+    <div class="error-box" id="error-box">
+      <div class="error-dot"></div>
+      <div id="error-text"></div>
     </div>
 
-    <!-- 已登录：主视图 -->
-    <div id="view-main" style="display:none;">
-      <!-- 桶列表 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">当前桶列表</div>
-          <button id="btn-refresh-buckets" class="btn-secondary" style="font-size:12px;padding:5px 10px;">
-            刷新列表
-          </button>
+    <form class="form" id="login-form">
+      <div class="field">
+        <div class="field-label-row">
+          <label class="field-label" for="username">用户名</label>
+          <span class="field-hint">例如：<code>admin</code></span>
         </div>
-        <div class="card-desc">
-          这里展示所有可用存储桶。上传接口会自动根据策略选择一个可用桶使用。
-        </div>
-        <div id="buckets-container" style="overflow-x:auto;">
-          <table id="tbl-buckets">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>名称</th>
-                <th>R2 桶名</th>
-                <th>最大容量</th>
-                <th>已用</th>
-                <th>状态</th>
-                <th class="actions">操作</th>
-              </tr>
-            </thead>
-            <tbody id="buckets-body">
-              <tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:8px 0;">暂无数据。</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="buckets-status" class="status-line"></div>
+        <input
+          id="username"
+          class="input"
+          type="text"
+          name="username"
+          autocomplete="username"
+          placeholder="请输入管理员用户名"
+        />
       </div>
 
-      <!-- 创建新桶 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">创建新桶</div>
+      <div class="field">
+        <div class="field-label-row">
+          <label class="field-label" for="password">密码</label>
         </div>
-        <div class="card-desc">
-          仅需填写一个显示名称、R2 桶名和最大容量（字节）。R2 的账号 ID / key 等在后端统一配置。
-        </div>
-
-        <div class="field-row">
-          <label for="new-display-name">桶显示名称</label>
-          <input id="new-display-name" placeholder="例如：默认图床" />
-        </div>
-        <div class="field-row">
-          <label for="new-r2-bucket">R2 桶名称</label>
-          <input id="new-r2-bucket" placeholder="例如：imgbed" />
-        </div>
-        <div class="field-row">
-          <label for="new-max-bytes">最大容量（字节，0 表示不限）</label>
-          <input id="new-max-bytes" type="number" min="0" placeholder="例如：1073741824 = 1 GiB" />
-        </div>
-
-        <div style="margin-top:10px;">
-          <button id="btn-create-bucket" class="btn-primary">创建桶</button>
-        </div>
-        <div id="create-bucket-status" class="status-line"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 右侧：Turnstile 配置 + 运行状态 -->
-  <div class="layout-right">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Turnstile 人机验证配置</div>
-        <span class="pill" id="pill-ts-state">状态未知</span>
-      </div>
-      <div class="card-desc">
-        仅在这里配置 Turnstile。配置会写入数据库（<code>turnstile_settings</code> 表），
-        不再依赖配置文件中的 site_key / secret_key 字段。
+        <input
+          id="password"
+          class="input"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          placeholder="请输入管理员密码"
+        />
       </div>
 
-      <div class="switch-row">
-        <input type="checkbox" id="ts-enabled" />
-        <span>启用 Turnstile 验证</span>
-      </div>
-
-      <div class="field-row">
-        <label for="ts-site-key">Site Key（站点密钥）</label>
-        <input id="ts-site-key" placeholder="从 Cloudflare Turnstile 控制台复制" />
-      </div>
-      <div class="field-row">
-        <label for="ts-secret-key">Secret Key（秘密密钥）</label>
-        <input id="ts-secret-key" placeholder="仅后端使用，请妥善保管" type="password" />
-      </div>
-
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button id="btn-test-ts" class="btn-secondary">测试配置</button>
-        <button id="btn-save-ts" class="btn-primary">保存配置</button>
-      </div>
-      <div id="ts-status" class="status-line"></div>
-
-      <div class="hint">
-        「测试配置」会使用 Secret Key 向 Cloudflare 官方接口发起一次测试请求，只有返回
-        <code>success=true</code> 时才认为配置可用；否则不会自动启用。
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">运行状态</div>
-        <button id="btn-logout" class="btn-secondary" style="font-size:12px;padding:5px 10px;">
-          前端退出
+      <div class="actions-row">
+        <button type="submit" id="btn-login" class="btn-primary">
+          <span>登录后台</span>
         </button>
+        <button type="button" id="btn-clear" class="btn-ghost">清空</button>
       </div>
-      <div class="card-desc">
-        这里可以简单查看后端健康状态，方便排错。
-      </div>
-      <div class="field-row">
-        <label>健康检查</label>
-        <div id="health-line" style="font-size:12px;color:#6b7280;">等待检测…</div>
-      </div>
-      <div class="hint">
-        若频繁出现 500 / 502，可以先检查数据库连接与 R2 配置，再查看 VPS 日志
-        <code>journalctl -u imagebed.service</code>。
+    </form>
+
+    <div class="footer">
+      <div>登录状态会保存在安全 Cookie 中，在不主动退出的情况下，可在同一浏览器长期保持登录。</div>
+      <div class="footer-right">
+        <div class="status-dot" id="status-dot" style="background:#f97316; box-shadow:0 0 0 4px rgba(249,115,22,0.25);"></div>
+        <span class="status-text" id="status-text">正在检测会话…</span>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-  const viewLogin = document.getElementById("view-login");
-  const viewMain  = document.getElementById("view-main");
+  <script>
+    const API_BASE = "/api/admin";
+    const DASHBOARD_URL = "/admin/dashboard"; // 之后仪表盘页面可以放这里
 
-  const loginUser = document.getElementById("login-username");
-  const loginPass = document.getElementById("login-password");
-  const loginStatus = document.getElementById("login-status");
+    const form = document.getElementById("login-form");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const btnLogin = document.getElementById("btn-login");
+    const btnClear = document.getElementById("btn-clear");
+    const errorBox = document.getElementById("error-box");
+    const errorText = document.getElementById("error-text");
+    const badgeState = document.getElementById("badge-state");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
 
-  const bucketsBody   = document.getElementById("buckets-body");
-  const bucketsStatus = document.getElementById("buckets-status");
-  const btnRefreshBuckets = document.getElementById("btn-refresh-buckets");
-
-  const newName   = document.getElementById("new-display-name");
-  const newBucket = document.getElementById("new-r2-bucket");
-  const newMax    = document.getElementById("new-max-bytes");
-  const createBucketStatus = document.getElementById("create-bucket-status");
-
-  const tsEnabled   = document.getElementById("ts-enabled");
-  const tsSiteKey   = document.getElementById("ts-site-key");
-  const tsSecretKey = document.getElementById("ts-secret-key");
-  const tsStatus    = document.getElementById("ts-status");
-  const pillTsState = document.getElementById("pill-ts-state");
-
-  const healthLine  = document.getElementById("health-line");
-
-  function setLoginStatus(msg, type) {
-    loginStatus.textContent = msg || "";
-    loginStatus.className = "status-line" + (type ? " " + type : "");
-  }
-  function setBucketsStatus(msg, type) {
-    bucketsStatus.textContent = msg || "";
-    bucketsStatus.className = "status-line" + (type ? " " + type : "");
-  }
-  function setCreateBucketStatus(msg, type) {
-    createBucketStatus.textContent = msg || "";
-    createBucketStatus.className = "status-line" + (type ? " " + type : "");
-  }
-  function setTsStatus(msg, type) {
-    tsStatus.textContent = msg || "";
-    tsStatus.className = "status-line" + (type ? " " + type : "");
-  }
-
-  function showLoginView() {
-    viewLogin.style.display = "block";
-    viewMain.style.display  = "none";
-  }
-  function showMainView() {
-    viewLogin.style.display = "none";
-    viewMain.style.display  = "block";
-  }
-
-  async function checkLoginAndInit() {
-    // 用「试拉桶列表」的方式探测是否已经登录
-    try {
-      const res = await fetch("/api/admin/buckets", { method: "GET", credentials: "same-origin" });
-      if (res.status === 401) {
-        showLoginView();
+    function setError(msg) {
+      if (!msg) {
+        errorBox.classList.remove("visible");
+        errorText.textContent = "";
+        usernameInput.classList.remove("input-error");
+        passwordInput.classList.remove("input-error");
         return;
       }
-      if (!res.ok) {
-        showLoginView();
-        return;
-      }
-      showMainView();
-      const data = await res.json().catch(() => null);
-      renderBuckets(data);
-      setBucketsStatus("已加载桶列表。", "");
-      await loadTurnstileConfig();
-    } catch (err) {
-      console.error(err);
-      showLoginView();
-    }
-  }
-
-  async function doLogin() {
-    const u = loginUser.value.trim();
-    const p = loginPass.value;
-    if (!u || !p) {
-      setLoginStatus("请填写用户名和密码。", "error");
-      return;
-    }
-    setLoginStatus("正在登录…", "");
-    try {
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ username: u, password: p })
-      });
-      const text = await res.text();
-      let data = null;
-      try { data = JSON.parse(text); } catch (_) {}
-
-      if (!res.ok || (data && data.ok === false)) {
-        let msg = "登录失败";
-        if (data && data.error) msg += "：" + data.error;
-        setLoginStatus(msg, "error");
-        return;
-      }
-      setLoginStatus("登录成功。", "success");
-      // Cookie 会由后端设置，这里只需要切换视图
-      showMainView();
-      await refreshBuckets();
-      await loadTurnstileConfig();
-    } catch (err) {
-      console.error(err);
-      setLoginStatus("登录请求失败：" + err, "error");
-    }
-  }
-
-  function renderBuckets(data) {
-    bucketsBody.innerHTML = "";
-    const list = data && (Array.isArray(data.buckets) ? data.buckets : (Array.isArray(data) ? data : []));
-    if (!list || list.length === 0) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 7;
-      td.style.textAlign = "center";
-      td.style.color = "#9ca3af";
-      td.style.padding = "8px 0";
-      td.textContent = "暂无桶，请先创建一个。";
-      tr.appendChild(td);
-      bucketsBody.appendChild(tr);
-      return;
+      errorBox.classList.add("visible");
+      errorText.textContent = msg;
+      usernameInput.classList.add("input-error");
+      passwordInput.classList.add("input-error");
     }
 
-    for (const b of list) {
-      const tr = document.createElement("tr");
-      const tdId   = document.createElement("td");
-      const tdName = document.createElement("td");
-      const tdR2   = document.createElement("td");
-      const tdMax  = document.createElement("td");
-      const tdCur  = document.createElement("td");
-      const tdStat = document.createElement("td");
-      const tdAct  = document.createElement("td");
-      tdAct.className = "actions";
-
-      tdId.textContent = b.id ?? "";
-      tdName.textContent = b.display_name || b.name || "";
-      tdR2.textContent = b.r2_bucket || b.bucket || "";
-      tdMax.textContent = formatBytes(b.max_bytes);
-      tdCur.textContent = formatBytes(b.current_bytes);
-
-      const span = document.createElement("span");
-      const status = (b.status || "").toLowerCase();
-      if (status === "disabled" || status === "blocked") {
-        span.className = "tag off";
-        span.textContent = status || "禁用";
+    function setLoading(isLoading) {
+      if (isLoading) {
+        btnLogin.disabled = true;
+        btnLogin.innerHTML =
+          '<div class="btn-primary-spinner"></div><span>正在登录…</span>';
       } else {
-        span.className = "tag";
-        span.textContent = status || "正常";
-      }
-      tdStat.appendChild(span);
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "btn-danger";
-      delBtn.style.fontSize = "11px";
-      delBtn.style.padding = "4px 8px";
-      delBtn.textContent = "删除";
-      delBtn.addEventListener("click", () => {
-        if (!confirm("确定要删除该桶吗？此操作不可恢复。")) return;
-        deleteBucket(b.id);
-      });
-      tdAct.appendChild(delBtn);
-
-      tr.appendChild(tdId);
-      tr.appendChild(tdName);
-      tr.appendChild(tdR2);
-      tr.appendChild(tdMax);
-      tr.appendChild(tdCur);
-      tr.appendChild(tdStat);
-      tr.appendChild(tdAct);
-      bucketsBody.appendChild(tr);
-    }
-  }
-
-  function formatBytes(v) {
-    if (v == null) return "";
-    const n = Number(v);
-    if (!isFinite(n)) return String(v);
-    if (n === 0) return "0";
-    const units = ["B","KiB","MiB","GiB","TiB"];
-    let i = 0, x = n;
-    while (x >= 1024 && i < units.length-1) { x /= 1024; i++; }
-    return x.toFixed(x >= 10 ? 0 : 1) + " " + units[i];
-  }
-
-  async function refreshBuckets() {
-    setBucketsStatus("正在加载桶列表…", "");
-    try {
-      const res = await fetch("/api/admin/buckets", { credentials: "same-origin" });
-      if (res.status === 401) {
-        setBucketsStatus("未登录或登录已过期，请重新登录。", "error");
-        showLoginView();
-        return;
-      }
-      if (!res.ok) {
-        setBucketsStatus("获取桶列表失败（HTTP " + res.status + "）。", "error");
-        return;
-      }
-      const data = await res.json().catch(() => null);
-      renderBuckets(data);
-      setBucketsStatus("已刷新桶列表。", "success");
-    } catch (err) {
-      console.error(err);
-      setBucketsStatus("请求失败：" + err, "error");
-    }
-  }
-
-  async function deleteBucket(id) {
-    if (!id) return;
-    setBucketsStatus("正在删除桶 ID " + id + "…", "");
-    try {
-      const res = await fetch("/api/admin/buckets/" + encodeURIComponent(id), {
-        method: "DELETE",
-        credentials: "same-origin"
-      });
-      const tx = await res.text();
-      let data = null;
-      try { data = JSON.parse(tx); } catch (_) {}
-
-      if (!res.ok) {
-        let msg = "删除失败";
-        if (data && data.error) msg += "：" + data.error;
-        setBucketsStatus(msg, "error");
-        return;
-      }
-      setBucketsStatus("删除成功。", "success");
-      await refreshBuckets();
-    } catch (err) {
-      console.error(err);
-      setBucketsStatus("删除请求失败：" + err, "error");
-    }
-  }
-
-  async function createBucket() {
-    const displayName = newName.value.trim();
-    const r2Bucket    = newBucket.value.trim();
-    const maxBytesRaw = newMax.value.trim();
-
-    if (!displayName || !r2Bucket) {
-      setCreateBucketStatus("显示名称和 R2 桶名不能为空。", "error");
-      return;
-    }
-    let maxBytes = 0;
-    if (maxBytesRaw) {
-      maxBytes = Number(maxBytesRaw);
-      if (!Number.isFinite(maxBytes) || maxBytes < 0) {
-        setCreateBucketStatus("最大容量必须是非负整数。", "error");
-        return;
+        btnLogin.disabled = false;
+        btnLogin.innerHTML = "<span>登录后台</span>";
       }
     }
 
-    setCreateBucketStatus("正在创建桶…", "");
-    try {
-      const res = await fetch("/api/admin/buckets", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: displayName,
-          r2_bucket: r2Bucket,
-          max_bytes: maxBytes
-        })
-      });
-      const tx = await res.text();
-      let data = null;
-      try { data = JSON.parse(tx); } catch (_) {}
+    function updateSessionUI(loggedIn, username) {
+      if (loggedIn) {
+        badgeState.textContent = "已登录";
+        badgeState.style.background = "#ecfdf5";
+        badgeState.style.color = "#166534";
+        badgeState.style.borderColor = "#bbf7d0";
 
-      if (!res.ok) {
-        let msg = "创建失败";
-        if (data && data.error) msg += "：" + data.error;
-        setCreateBucketStatus(msg, "error");
-        return;
-      }
-      setCreateBucketStatus("创建成功。", "success");
-      newName.value = "";
-      newBucket.value = "";
-      newMax.value = "";
-      await refreshBuckets();
-    } catch (err) {
-      console.error(err);
-      setCreateBucketStatus("创建请求失败：" + err, "error");
-    }
-  }
-
-  async function loadTurnstileConfig() {
-    setTsStatus("正在加载 Turnstile 配置…", "");
-    try {
-      const res = await fetch("/api/admin/turnstile", { credentials: "same-origin" });
-      if (!res.ok) {
-        setTsStatus("获取配置失败（HTTP " + res.status + "），可以稍后重试。", "error");
-        pillTsState.textContent = "未知";
-        pillTsState.style.background = "#fef3c7";
-        pillTsState.style.color = "#92400e";
-        return;
-      }
-      const data = await res.json().catch(() => null) || {};
-      tsEnabled.checked = !!data.enabled;
-      tsSiteKey.value   = data.site_key || "";
-      tsSecretKey.value = data.secret_key || "";
-      updateTsPill();
-      setTsStatus("已加载 Turnstile 配置。", "success");
-    } catch (err) {
-      console.error(err);
-      setTsStatus("请求失败：" + err, "error");
-      pillTsState.textContent = "错误";
-      pillTsState.style.background = "#fee2e2";
-      pillTsState.style.color = "#b91c1c";
-    }
-  }
-
-  function updateTsPill() {
-    if (tsEnabled.checked && tsSiteKey.value && tsSecretKey.value) {
-      pillTsState.textContent = "已启用";
-      pillTsState.style.background = "#ecfdf3";
-      pillTsState.style.color = "#16a34a";
-    } else {
-      pillTsState.textContent = "未启用";
-      pillTsState.style.background = "#fee2e2";
-      pillTsState.style.color = "#b91c1c";
-    }
-  }
-
-  async function testTurnstile() {
-    setTsStatus("正在测试配置…", "");
-    try {
-      const res = await fetch("/api/admin/turnstile/test", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          enabled: tsEnabled.checked,
-          site_key: tsSiteKey.value.trim(),
-          secret_key: tsSecretKey.value.trim()
-        })
-      });
-      const tx = await res.text();
-      let data = null;
-      try { data = JSON.parse(tx); } catch (_) {}
-      if (!res.ok || !data || !data.success) {
-        let msg = "测试失败";
-        if (data && data.error) msg += "：" + data.error;
-        setTsStatus(msg, "error");
-        return;
-      }
-      setTsStatus("Turnstile 配置测试成功，返回 success=true。", "success");
-    } catch (err) {
-      console.error(err);
-      setTsStatus("测试请求失败：" + err, "error");
-    }
-  }
-
-  async function saveTurnstile() {
-    setTsStatus("正在保存配置…", "");
-    try {
-      const res = await fetch("/api/admin/turnstile/save", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          enabled: tsEnabled.checked,
-          site_key: tsSiteKey.value.trim(),
-          secret_key: tsSecretKey.value.trim()
-        })
-      });
-      const tx = await res.text();
-      let data = null;
-      try { data = JSON.parse(tx); } catch (_) {}
-      if (!res.ok) {
-        let msg = "保存失败";
-        if (data && data.error) msg += "：" + data.error;
-        setTsStatus(msg, "error");
-        return;
-      }
-      setTsStatus("保存成功。", "success");
-      updateTsPill();
-    } catch (err) {
-      console.error(err);
-      setTsStatus("保存请求失败：" + err, "error");
-    }
-  }
-
-  async function checkHealth() {
-    try {
-      const res = await fetch("/api/healthz", { credentials: "same-origin" });
-      if (!res.ok) {
-        healthLine.textContent = "健康检查失败（HTTP " + res.status + "）。";
-        healthLine.style.color = "#b91c1c";
-        return;
-      }
-      const data = await res.json().catch(() => null);
-      if (data && data.ok) {
-        healthLine.textContent = "后端运行正常。";
-        healthLine.style.color = "#15803d";
+        statusDot.style.background = "#22c55e";
+        statusDot.style.boxShadow = "0 0 0 4px rgba(34,197,94,0.22)";
+        statusText.textContent = username
+          ? "已登录：" + username
+          : "已登录";
       } else {
-        healthLine.textContent = "健康检查返回异常响应。";
-        healthLine.style.color = "#b91c1c";
+        badgeState.textContent = "未登录";
+        badgeState.style.background = "#f9fafb";
+        badgeState.style.color = "#4b5563";
+        badgeState.style.borderColor = "#e5e7eb";
+
+        statusDot.style.background = "#f97316";
+        statusDot.style.boxShadow = "0 0 0 4px rgba(249,115,22,0.25)";
+        statusText.textContent = "尚未登录";
       }
-    } catch (err) {
-      console.error(err);
-      healthLine.textContent = "健康检查请求失败：" + err;
-      healthLine.style.color = "#b91c1c";
     }
-  }
 
-  document.getElementById("btn-login").addEventListener("click", (e) => {
-    e.preventDefault();
-    doLogin();
-  });
-  document.getElementById("btn-login-clear").addEventListener("click", (e) => {
-    e.preventDefault();
-    loginUser.value = "";
-    loginPass.value = "";
-    setLoginStatus("", "");
-  });
+    async function checkSession() {
+      try {
+        const resp = await fetch(API_BASE + "/session", {
+          credentials: "include"
+        });
+        if (!resp.ok) {
+          updateSessionUI(false);
+          return;
+        }
+        const data = await resp.json().catch(() => ({}));
+        const logged = !!data.logged_in;
+        const username = data.username || "";
+        updateSessionUI(logged, username);
 
-  btnRefreshBuckets.addEventListener("click", (e) => {
-    e.preventDefault();
-    refreshBuckets();
-  });
-  document.getElementById("btn-create-bucket").addEventListener("click", (e) => {
-    e.preventDefault();
-    createBucket();
-  });
+        // 如果已经登录，直接跳转到仪表盘
+        if (logged && DASHBOARD_URL) {
+          window.location.href = DASHBOARD_URL;
+        }
+      } catch (e) {
+        statusDot.style.background = "#f97316";
+        statusText.textContent = "会话检测失败";
+      }
+    }
 
-  tsEnabled.addEventListener("change", updateTsPill);
-  document.getElementById("btn-test-ts").addEventListener("click", (e) => {
-    e.preventDefault();
-    testTurnstile();
-  });
-  document.getElementById("btn-save-ts").addEventListener("click", (e) => {
-    e.preventDefault();
-    saveTurnstile();
-  });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setError("");
 
-  document.getElementById("btn-logout").addEventListener("click", (e) => {
-    e.preventDefault();
-    // 简单粗暴：清空前端状态 + 刷新页面。服务端 Cookie 由后端控制过期。
-    showLoginView();
-    loginUser.value = "";
-    loginPass.value = "";
-    setLoginStatus("已退出当前会话（仅前端）。如需完全登出请关闭浏览器或等待会话过期。", "");
-  });
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
 
-  // 初始化：探测是否已登录 + 拉取健康状态
-  checkLoginAndInit();
-  checkHealth();
-</script>
+      if (!username || !password) {
+        setError("请完整填写用户名和密码。");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const resp = await fetch(API_BASE + "/login", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            username,
+            password
+          })
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.ok) {
+          const msg =
+            data.error === "invalid_credentials"
+              ? "用户名或密码不正确。"
+              : data.detail ||
+                data.error ||
+                "登录失败，请稍后重试。";
+          setError(msg);
+          updateSessionUI(false);
+          return;
+        }
+
+        updateSessionUI(true, username);
+        setError("");
+
+        // 登录成功，跳转到仪表盘
+        if (DASHBOARD_URL) {
+          window.location.href = DASHBOARD_URL;
+        }
+      } catch (err) {
+        console.error(err);
+        setError("无法连接服务器，请检查网络或稍后再试。");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    btnClear.addEventListener("click", () => {
+      usernameInput.value = "";
+      passwordInput.value = "";
+      setError("");
+      usernameInput.focus();
+    });
+
+    // Enter 快捷键：光标在密码框时回车直接提交
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        form.dispatchEvent(new Event("submit", { cancelable: true }));
+      }
+    });
+
+    // 页面加载后检测是否已经登录
+    checkSession();
+  </script>
 </body>
 </html>

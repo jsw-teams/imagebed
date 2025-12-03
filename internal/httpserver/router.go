@@ -21,8 +21,10 @@ import (
 	"github.com/jsw-teams/imagebed/internal/models"
 	"github.com/jsw-teams/imagebed/internal/storage"
 	"github.com/jsw-teams/imagebed/internal/turnstile"
+	webui "github.com/jsw-teams/imagebed/web"
 )
 
+// Server 封装整个 HTTP 服务及其依赖
 type Server struct {
 	addr       string
 	configPath string
@@ -41,6 +43,8 @@ type Server struct {
 	imageHandler  *handlers.ImageHandler
 }
 
+// NewServer 使用给定的配置创建 HTTP 服务器。
+// cfg 通常由 config.Load(configPath) 得到。
 func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 	if cfg.HTTP.Addr == "" {
 		cfg.HTTP.Addr = ":9000"
@@ -52,7 +56,7 @@ func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 		cfg:        cfg,
 	}
 
-	// 如果已经安装过，则在启动时初始化运行环境
+	// 如果已经安装过，则启动时初始化运行环境（DB / 迁移 / R2 / 审查 / Turnstile）
 	if cfg.Installed {
 		if err := s.initRuntime(context.Background()); err != nil {
 			return nil, err
@@ -102,7 +106,7 @@ func (s *Server) initRuntime(ctx context.Context) error {
 
 	modService := moderation.NewService(cfg.Moderation, cfg.App.AllowedMimeTypes)
 
-	// Turnstile 配置改由数据库提供
+	// Turnstile 配置由数据库提供
 	tsCfg, err := models.GetTurnstileSettings(ctx, db)
 	if err != nil {
 		db.Close()
@@ -140,45 +144,96 @@ func (s *Server) getDB() *pgxpool.Pool {
 	return s.db
 }
 
+// 从 embed.FS 中读取 HTML 并返回
+func serveEmbeddedHTML(c *gin.Context, path string) {
+	data, err := webui.FS.ReadFile(path)
+	if err != nil {
+		c.String(http.StatusNotFound, "not found")
+		return
+	}
+	c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+}
+
+// buildEngine 构建 gin.Engine 和所有路由
 func (s *Server) buildEngine() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.SecurityHeaders())
 
-	// 后台静态管理页（/admin/）
-	r.Static("/admin", "./web/admin")
+	// ---------- 前端路由 ----------
 
-	// /setup 仅在未安装时能访问；安装完成后直接 404
+	// 根路径：
+	//   未安装 -> /setup
+	//   已安装 -> 内嵌的 web/index.html（上传页）
+	r.GET("/", func(c *gin.Context) {
+		if !s.IsInstalled() {
+			c.Redirect(http.StatusFound, "/setup")
+			return
+		}
+		serveEmbeddedHTML(c, "index.html")
+	})
+
+	// 保留 /upload 兼容：已安装时同样渲染 index.html
+	r.GET("/upload", func(c *gin.Context) {
+		if !s.IsInstalled() {
+			c.Redirect(http.StatusFound, "/setup")
+			return
+		}
+		serveEmbeddedHTML(c, "index.html")
+	})
+	r.GET("/upload/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/upload")
+	})
+
+	// 初始化安装页面：仅未安装时可访问；已安装后强制 404，禁止再次初始化
 	r.GET("/setup", s.serveSetupPage)
 	r.GET("/setup/", s.serveSetupPage)
 
-	// 根路径：未安装 -> /setup；已安装 -> web/index.html
-	r.GET("/", func(c *gin.Context) {
+	// 管理后台登录页：未安装时跳转 /setup
+	r.GET("/admin", func(c *gin.Context) {
 		if !s.IsInstalled() {
-			c.Redirect(http.StatusFound, "/setup/")
+			c.Redirect(http.StatusFound, "/setup")
 			return
 		}
-		c.File("./web/index.html")
+		serveEmbeddedHTML(c, "admin/index.html")
+	})
+	r.GET("/admin/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/admin")
 	})
 
-	// 健康检查
+	// 管理后台 dashboard 页面（如果前端有 web/admin/dashboard.html）
+	r.GET("/admin/dashboard", func(c *gin.Context) {
+		if !s.IsInstalled() {
+			c.Redirect(http.StatusFound, "/setup")
+			return
+		}
+		serveEmbeddedHTML(c, "admin/dashboard.html")
+	})
+	r.GET("/admin/dashboard/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/admin/dashboard")
+	})
+
+	// 健康检查（不依赖安装状态）
 	r.GET("/healthz", handlers.HealthHandler())
 
-	// 初始化安装 API（两步）
+	// ---------- 安装 API（不要求已安装） ----------
+
 	r.POST("/api/setup/database", s.handleSetupDatabase)
 	r.POST("/api/setup/admin", s.handleSetupAdmin)
 
-	// 已安装后才能访问的 API
+	// ---------- 已安装后才能访问的 API ----------
+
 	api := r.Group("/api")
 	api.Use(middleware.RequireInstalled(func() bool { return s.IsInstalled() }))
 	{
 		api.GET("/healthz", handlers.HealthHandler())
 
+		// 创建 handler 实例
 		s.bucketHandler = handlers.NewBucketHandler()
 		s.imageHandler = handlers.NewImageHandler(s.cfg.App.MaxUploadBytes)
 
-		// 如果启动时就安装好了，注入依赖
+		// 如果启动时就已安装，则注入依赖
 		if s.IsInstalled() {
 			s.mu.RLock()
 			db := s.db
@@ -191,46 +246,51 @@ func (s *Server) buildEngine() {
 			}
 		}
 
+		// Turnstile 中间件（上传用）
 		tsMiddleware := middleware.Turnstile(
 			func() *turnstile.Verifier { return s.GetVerifier() },
 			func() bool { return s.IsTurnstileEnabled() },
 		)
 
-		// bucket 管理接口：所有读写都需要管理员登录（不叠加 Turnstile）
-		bucketsAdmin := api.Group("/buckets")
-		bucketsAdmin.Use(middleware.AdminAuth(s.getDB))
+		// ---------- 管理员登录相关（不加 AdminAuthRequired） ----------
+		adminOpen := api.Group("/admin")
 		{
-			bucketsAdmin.GET("", s.bucketHandler.ListBuckets)
-			bucketsAdmin.GET("/:id", s.bucketHandler.GetBucket)
-			bucketsAdmin.POST("", s.bucketHandler.CreateBucket)
-			bucketsAdmin.PUT("/:id", s.bucketHandler.UpdateBucket)
-			bucketsAdmin.DELETE("/:id", s.bucketHandler.DeleteBucket)
+			adminOpen.GET("/session", middleware.HandleAdminSessionStatus())
+			adminOpen.POST("/login", middleware.HandleAdminLogin(s.getDB))
+			adminOpen.POST("/logout", middleware.HandleAdminLogout())
 		}
 
-		// 旧接口：指定桶上传（供第三方程序使用），使用 Turnstile 防滥用
-		api.POST("/buckets/:bucketID/upload", tsMiddleware, s.imageHandler.Upload)
-
-		// 新接口：自动分配桶上传（给前端上传页使用），同样使用 Turnstile 防滥用
-		api.POST("/upload", tsMiddleware, s.handleAutoUpload)
-
-		api.GET("/images/:id", s.imageHandler.GetImageMeta)
-
-		// 后台登录检测接口
-		api.POST("/admin/login", s.handleAdminLogin)
-
-		// 后台 Turnstile 配置接口（需管理员登录）
+		// ---------- 需要管理员登录的后台 API ----------
 		adminSec := api.Group("/admin")
-		adminSec.Use(middleware.AdminAuth(s.getDB))
+		adminSec.Use(middleware.AdminAuthRequired())
 		{
+			// R2 桶管理
+			adminSec.GET("/buckets", s.bucketHandler.ListBuckets)
+			adminSec.GET("/buckets/:id", s.bucketHandler.GetBucket)
+			adminSec.POST("/buckets", s.bucketHandler.CreateBucket)
+			adminSec.PUT("/buckets/:id", s.bucketHandler.UpdateBucket)
+			adminSec.DELETE("/buckets/:id", s.bucketHandler.DeleteBucket)
+
+			// Turnstile 配置（后台管理）
 			adminSec.GET("/turnstile", s.handleAdminGetTurnstile)
 			adminSec.POST("/turnstile", s.handleAdminUpdateTurnstile)
+			adminSec.POST("/turnstile/test", s.handleAdminTestTurnstile)
 		}
+
+		// 旧接口：指定桶上传（第三方客户端用）
+		api.POST("/buckets/:bucketID/upload", tsMiddleware, s.imageHandler.Upload)
+
+		// 新接口：自动挑桶上传（前端上传页使用）
+		api.POST("/upload", tsMiddleware, s.handleAutoUpload)
+
+		// 查询图片元信息
+		api.GET("/images/:id", s.imageHandler.GetImageMeta)
 	}
 
 	// 图片访问统一入口
 	r.GET("/i/:id", func(c *gin.Context) {
 		if !s.IsInstalled() {
-			c.Redirect(http.StatusFound, "/setup/")
+			c.Redirect(http.StatusFound, "/setup")
 			return
 		}
 		s.imageHandler.ServeImage(c)
@@ -239,29 +299,33 @@ func (s *Server) buildEngine() {
 	s.engine = r
 }
 
-// 安装页：未安装才可以访问；已安装直接 404，禁止再次初始化
+// 初始化页面：未安装才可以访问；已安装直接 404，禁止再次进入安装向导
 func (s *Server) serveSetupPage(c *gin.Context) {
 	if s.IsInstalled() {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
-	c.File("./web/setup/index.html")
+	serveEmbeddedHTML(c, "setup/index.html")
 }
 
+// Run 启动 HTTP 服务
 func (s *Server) Run() error {
 	return s.httpServer.ListenAndServe()
 }
 
+// Shutdown 平滑关闭 HTTP 服务
 func (s *Server) Shutdown(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	return s.httpServer.Shutdown(ctx)
 }
 
+// Addr 返回监听地址
 func (s *Server) Addr() string {
 	return s.addr
 }
 
+// CloseDB 关闭数据库连接
 func (s *Server) CloseDB() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -271,19 +335,21 @@ func (s *Server) CloseDB() {
 	}
 }
 
+// IsInstalled 当前是否已完成安装
 func (s *Server) IsInstalled() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.cfg != nil && s.cfg.Installed
 }
 
+// GetVerifier 返回当前 Turnstile Verifier
 func (s *Server) GetVerifier() *turnstile.Verifier {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.verifier
 }
 
-// Turnstile 启用状态来自数据库配置
+// IsTurnstileEnabled Turnstile 启用状态来自数据库配置
 func (s *Server) IsTurnstileEnabled() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -299,7 +365,9 @@ func (s *Server) IsTurnstileEnabled() bool {
 	return s.verifier != nil
 }
 
+//
 // ---------- 安装 API：步骤一 - 配置数据库 ----------
+//
 
 type setupDatabaseRequest struct {
 	DBName string `json:"db_name"`
@@ -397,7 +465,9 @@ func (s *Server) handleSetupDatabase(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// ---------- 安装 API：步骤二 - 设置管理员 ----------
+//
+// ---------- 安装 API：步骤二 - 设置管理员账号 ----------
+//
 
 type setupAdminRequest struct {
 	AdminUsername string `json:"admin_username"`
@@ -465,6 +535,7 @@ func (s *Server) handleSetupAdmin(c *gin.Context) {
 		return
 	}
 
+	// 标记安装完成
 	newCfg := *cfg
 	newCfg.Installed = true
 
@@ -477,6 +548,7 @@ func (s *Server) handleSetupAdmin(c *gin.Context) {
 		return
 	}
 
+	// 安装完成后，初始化 R2 / Moderation / Turnstile
 	var r2Client *storage.R2Client
 	if hasR2Config(&newCfg.R2) {
 		r2Client, err = storage.NewR2Client(ctx, newCfg.R2)
@@ -491,7 +563,6 @@ func (s *Server) handleSetupAdmin(c *gin.Context) {
 	}
 	modService := moderation.NewService(newCfg.Moderation, newCfg.App.AllowedMimeTypes)
 
-	// 安装完成后，同步从数据库载入 Turnstile 配置
 	tsCfg, err := models.GetTurnstileSettings(ctx, db)
 	if err != nil {
 		db.Close()
@@ -528,58 +599,9 @@ func (s *Server) handleSetupAdmin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// ---------- 后台登录 API ----------
-
-type adminLoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-func (s *Server) handleAdminLogin(c *gin.Context) {
-	s.mu.RLock()
-	cfg := s.cfg
-	db := s.db
-	s.mu.RUnlock()
-
-	if cfg == nil || !cfg.Installed {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "not_installed"})
-		return
-	}
-	if db == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "db_not_ready"})
-		return
-	}
-
-	var req adminLoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	req.Username = strings.TrimSpace(req.Username)
-	req.Password = strings.TrimSpace(req.Password)
-	if req.Username == "" || req.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing_fields"})
-		return
-	}
-
-	ok, err := models.CheckAdminCredentials(c.Request.Context(), db, req.Username, req.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  "auth_failed",
-			"detail": err.Error(),
-		})
-		return
-	}
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_credentials"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"ok": true})
-}
-
+//
 // ---------- 自动分配桶并上传 ----------
+//
 
 func (s *Server) handleAutoUpload(c *gin.Context) {
 	s.mu.RLock()
@@ -604,8 +626,7 @@ func (s *Server) handleAutoUpload(c *gin.Context) {
 		return
 	}
 
-	// 把自动挑选出来的 bucketID 写入 Gin 的路径参数，
-	// 复用现有的 Upload 逻辑（它会通过 c.Param("bucketID") 取桶 ID）
+	// 把 auto 选出的 bucketID 写入 Gin 的路径参数，复用 Upload 逻辑
 	c.Params = append(c.Params, gin.Param{
 		Key:   "bucketID",
 		Value: bucketID,
@@ -614,7 +635,9 @@ func (s *Server) handleAutoUpload(c *gin.Context) {
 	s.imageHandler.Upload(c)
 }
 
+//
 // ---------- 后台 Turnstile 配置 API ----------
+//
 
 type turnstileConfigResponse struct {
 	Enabled   bool   `json:"enabled"`
@@ -626,7 +649,11 @@ type updateTurnstileRequest struct {
 	Enabled   bool   `json:"enabled"`
 	SiteKey   string `json:"site_key"`
 	SecretKey string `json:"secret_key"`
-	TestToken string `json:"test_token"` // 管理后台小组件生成的真实 token
+}
+
+type testTurnstileRequest struct {
+	SecretKey string `json:"secret_key"`
+	TestToken string `json:"test_token"`
 }
 
 func (s *Server) handleAdminGetTurnstile(c *gin.Context) {
@@ -702,30 +729,10 @@ func (s *Server) handleAdminUpdateTurnstile(c *gin.Context) {
 
 	req.SiteKey = strings.TrimSpace(req.SiteKey)
 	req.SecretKey = strings.TrimSpace(req.SecretKey)
-	req.TestToken = strings.TrimSpace(req.TestToken)
 
-	// 启用时：必须有 site_key / secret_key / test_token，并且 siteverify 成功才允许启用
-	if req.Enabled {
-		if req.SiteKey == "" || req.SecretKey == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "enabled_requires_site_and_secret"})
-			return
-		}
-		if req.TestToken == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "enabled_requires_test_token"})
-			return
-		}
-		if err := verifyTurnstileConfig(c.Request.Context(), req.SecretKey, req.TestToken); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":  "turnstile_verify_failed",
-				"detail": err.Error(),
-			})
-			return
-		}
-	}
-
-	// 如果只是保存 Key 而不启用，可以不验证，直接写入 enabled=false
-	if !req.Enabled && (req.SiteKey == "" && req.SecretKey == "") {
-		// 允许直接关闭并清空
+	if req.Enabled && (req.SiteKey == "" || req.SecretKey == "") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "enabled_requires_site_and_secret"})
+		return
 	}
 
 	ctx := c.Request.Context()
@@ -756,7 +763,35 @@ func (s *Server) handleAdminUpdateTurnstile(c *gin.Context) {
 	})
 }
 
-// ---------- Turnstile 配置验证（用真实 token 调用 siteverify） ----------
+// /api/admin/turnstile/test：用真实 token 调用 siteverify 验证密钥是否有效
+func (s *Server) handleAdminTestTurnstile(c *gin.Context) {
+	var req testTurnstileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+	req.SecretKey = strings.TrimSpace(req.SecretKey)
+	req.TestToken = strings.TrimSpace(req.TestToken)
+
+	if req.SecretKey == "" || req.TestToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing_secret_or_token"})
+		return
+	}
+
+	if err := verifyTurnstileConfig(c.Request.Context(), req.SecretKey, req.TestToken); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "turnstile_verify_failed",
+			"detail": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+//
+// ---------- Turnstile siteverify ----------
+//
 
 type siteVerifyResp struct {
 	Success    bool     `json:"success"`
@@ -802,7 +837,7 @@ func verifyTurnstileConfig(ctx context.Context, secret, token string) error {
 		return nil
 	}
 
-	// 这里严格区分：如果是 secret 错误，明确提示；否则视为 token 无效
+	// secret 相关错误：直接提示密钥配置问题
 	secretErrs := map[string]bool{
 		"invalid-input-secret": true,
 		"missing-input-secret": true,
@@ -815,6 +850,7 @@ func verifyTurnstileConfig(ctx context.Context, secret, token string) error {
 		}
 	}
 
+	// 其它错误视为 token 无效
 	if len(out.ErrorCodes) > 0 {
 		return fmt.Errorf("invalid token: %s", strings.Join(out.ErrorCodes, ","))
 	}

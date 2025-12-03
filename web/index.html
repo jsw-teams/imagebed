@@ -2,125 +2,840 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 图床</title>
+  <title>Imagebed 图床 · 上传</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at top, #e0f2fe 0, #eef2ff 40%, #f9fafb 100%);
+      --card-bg: rgba(255, 255, 255, 0.98);
+      --primary: #2563eb;
+      --primary-deep: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --danger: #dc2626;
+      --border-soft: rgba(148, 163, 184, 0.35);
+      --shadow-soft: 0 22px 45px rgba(15, 23, 42, 0.16);
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --transition-fast: 150ms ease-out;
+    }
+
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
       margin: 0;
-      min-height: 100vh;
-      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-      background: radial-gradient(circle at top, #eff6ff 0, #f9fafb 45%, #f3f4f6 100%);
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+    }
+
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 12px;
-      color: #111827;
+      padding: 16px;
     }
+
     .shell {
+      max-width: 760px;
       width: 100%;
-      max-width: 720px;
-      background: rgba(255,255,255,0.96);
-      border-radius: 20px;
-      box-shadow: 0 22px 60px rgba(15,23,42,0.14);
-      padding: 24px 24px 22px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 22px 22px 18px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 14px;
     }
-    .logo {
-      font-size: 21px;
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-    .logo span { color: #2563eb; }
-    .subtitle {
-      font-size: 13px;
-      color: #6b7280;
-      max-width: 520px;
-      margin-top: 6px;
-    }
-    .actions {
-      margin-top: 14px;
+
+    .header-row {
       display: flex;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
       gap: 10px;
     }
-    .btn {
-      border: none;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
       border-radius: 999px;
-      padding: 9px 18px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
+      background: conic-gradient(from 210deg, #1d4ed8, #22c55e, #0ea5e9, #1d4ed8);
+      display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-    }
-    .btn-primary {
-      background: #2563eb;
       color: #fff;
+      font-weight: 700;
+      font-size: 17px;
+      box-shadow: 0 6px 12px rgba(37, 99, 235, 0.35);
     }
-    .btn-secondary {
-      background: #e5e7eb;
-      color: #111827;
+
+    .title-main {
+      font-size: 18px;
+      font-weight: 600;
     }
-    .hint {
-      margin-top: 8px;
+
+    .title-sub {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .header-right {
       font-size: 11px;
-      color: #9ca3af;
+      color: var(--text-sub);
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
     }
-    .panel {
-      margin-top: 10px;
-      border-radius: 14px;
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
       border: 1px solid #e5e7eb;
       background: #f9fafb;
-      padding: 12px 14px;
+    }
+
+    .upload-layout {
+      margin-top: 6px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .upload-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dropzone-card {
+      border-radius: var(--radius-lg);
+      border: 1px dashed rgba(148,163,184,0.9);
+      background: #f9fafb;
+      padding: 14px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dropzone-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .dropzone-desc {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .dropzone {
+      margin-top: 4px;
+      border-radius: 16px;
+      border: 1px dashed #cbd5f5;
+      background: #ffffff;
+      padding: 24px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition-fast),
+                  background-color var(--transition-fast),
+                  transform var(--transition-fast),
+                  box-shadow var(--transition-fast);
+    }
+
+    .dropzone:hover {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      box-shadow: 0 12px 26px rgba(148,163,184,0.25);
+      transform: translateY(-1px);
+    }
+
+    .dropzone.dragover {
+      border-color: var(--primary);
+      background: #e0f2fe;
+      box-shadow: 0 18px 36px rgba(37,99,235,0.35);
+      transform: translateY(-1px);
+    }
+
+    .drop-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--primary-deep);
+      margin-bottom: 2px;
+    }
+
+    .drop-main-text {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .drop-sub-text {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .btn-primary {
+      height: 34px;
+      border-radius: 999px;
+      border: none;
+      padding: 0 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.55);
+      transition: transform var(--transition-fast),
+                  box-shadow var(--transition-fast),
+                  filter var(--transition-fast),
+                  opacity var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+      box-shadow: 0 16px 34px rgba(37, 99, 235, 0.6);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 9px 20px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-primary[disabled] {
+      opacity: 0.6;
+      box-shadow: none;
+      cursor: default;
+      transform: none;
+    }
+
+    .btn-ghost {
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 0 12px;
+      font-size: 12px;
+      background: #ffffff;
+      color: #4b5563;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background-color var(--transition-fast),
+                  transform var(--transition-fast);
+    }
+
+    .btn-ghost:hover {
+      background: #f3f4f6;
+      transform: translateY(-0.5px);
+    }
+
+    .field {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    label {
       font-size: 12px;
       color: #4b5563;
+      font-weight: 500;
     }
-    .panel h3 {
-      margin: 0 0 6px;
+
+    label small {
+      color: #9ca3af;
+      font-weight: 400;
+    }
+
+    .input {
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 0 10px;
+      font-size: 12px;
+      background: #ffffff;
+      transition: border-color var(--transition-fast),
+                  box-shadow var(--transition-fast);
+      min-width: 220px;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 1px #bfdbfe;
+    }
+
+    .input::placeholder {
+      color: #9ca3af;
+    }
+
+    .preview {
+      margin-top: 6px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      padding: 8px 8px 6px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preview-name {
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preview-meta {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .preview-img-wrap {
+      margin-top: 4px;
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
+    }
+
+    .preview-img-wrap img {
+      max-width: 100%;
+      max-height: 210px;
+      display: block;
+    }
+
+    .error-box {
+      margin-top: 8px;
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--danger);
+      background: #fee2e2;
+      border-radius: var(--radius-md);
+      border: 1px solid #fecaca;
+      padding: 8px 10px;
+    }
+
+    .error-box.visible {
+      display: flex;
+    }
+
+    .error-dot {
+      margin-top: 3px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--danger);
+      flex-shrink: 0;
+    }
+
+    .side-card {
+      border-radius: var(--radius-lg);
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      padding: 12px 12px 10px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .side-title {
       font-size: 13px;
       font-weight: 600;
-      color: #111827;
     }
-    .panel ul {
-      margin: 4px 0 0;
-      padding-left: 18px;
+
+    .side-item {
+      display: flex;
+      gap: 6px;
     }
-    .panel li { margin: 2px 0; }
+
+    .side-dot {
+      margin-top: 4px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #a5b4fc;
+      flex-shrink: 0;
+    }
+
+    .result-card {
+      margin-top: 12px;
+      border-radius: var(--radius-lg);
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      padding: 10px 10px 9px;
+      font-size: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .result-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .result-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .result-label {
+      color: #6b7280;
+      min-width: 52px;
+    }
+
+    .url-box {
+      flex: 1;
+      min-width: 160px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-mini {
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 3px 8px;
+      font-size: 11px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: background-color var(--transition-fast),
+                  transform var(--transition-fast);
+    }
+
+    .btn-mini:hover {
+      background: #f3f4f6;
+      transform: translateY(-0.5px);
+    }
+
+    .muted {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .footer-row {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-sub);
+      flex-wrap: wrap;
+    }
+
+    a {
+      color: var(--primary-deep);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-<div class="shell">
-  <div>
-    <div class="logo"><span>Imagebed</span> 图床</div>
-    <div class="subtitle">
-      一个轻量的自建图床服务，支持 Cloudflare R2、Turnstile 人机验证与基础图片安全检查。
-      你可以直接上传图片，也可以登录后台管理存储桶和配置。
-    </div>
+  <div class="shell">
+    <div class="card">
+      <!-- 顶部品牌 + 状态 -->
+      <div class="header-row">
+        <div class="brand">
+          <div class="logo">Ib</div>
+          <div>
+            <div class="title-main">Imagebed 图床 · 上传</div>
+            <div class="title-sub">
+              轻量、干净的图床服务。选择图片，一键上传，直接获得可公开访问的链接。
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="pill">公共上传入口</div>
+          <div>后台管理入口仅对管理员开放。</div>
+        </div>
+      </div>
 
-    <div class="actions">
-      <a class="btn btn-primary" href="/upload/">开始上传图片</a>
-      <a class="btn btn-secondary" href="/admin/">进入后台管理</a>
-    </div>
+      <!-- 上传主区域 -->
+      <div class="upload-layout">
+        <!-- 左侧：上传 + 预览 -->
+        <div>
+          <div class="dropzone-card">
+            <div class="dropzone-title">上传图片</div>
+            <div class="dropzone-desc">
+              支持常见图片格式（PNG / JPG / GIF / WebP 等），具体限制由后台配置的 MIME 白名单与大小控制。
+            </div>
 
-    <div class="hint">
-      如果是第一次部署本服务，请先访问 <code>/setup</code> 完成初始化安装。
+            <div class="dropzone" id="dropzone">
+              <div class="drop-icon">⬆</div>
+              <div class="drop-main-text">点击选择图片，或将图片拖拽到这里</div>
+              <div class="drop-sub-text">上传前不会自动压缩，适合作为外链或嵌入使用。</div>
+              <button class="btn-primary" id="btn-select">选择图片</button>
+              <input id="file-input" type="file" class="file-input" accept="image/*" />
+            </div>
+
+            <div class="field">
+              <label for="ts-token">
+                Turnstile Token（可留空）
+                <small>如果后台启用了 Cloudflare Turnstile，可将前端小组件生成的 token 粘贴在此。</small>
+              </label>
+              <input id="ts-token" class="input" placeholder="未启用可留空；启用后建议填写真实 token" />
+            </div>
+
+            <div class="field">
+              <button class="btn-primary" id="btn-upload">开始上传</button>
+            </div>
+
+            <div class="preview" id="preview">
+              <div class="preview-header">
+                <div class="preview-name" id="preview-name"></div>
+                <div class="preview-meta" id="preview-meta"></div>
+              </div>
+              <div class="preview-img-wrap">
+                <img id="preview-img" alt="预览" />
+              </div>
+            </div>
+
+            <div class="error-box" id="error-box">
+              <div class="error-dot"></div>
+              <div id="error-text"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：说明 / 结果 -->
+        <div>
+          <div class="side-card">
+            <div class="side-title">使用说明</div>
+
+            <div class="side-item">
+              <div class="side-dot"></div>
+              <div>
+                <strong>自动分配存储桶：</strong> 上传时，后端会根据桶配额与状态自动选择合适的 R2 桶，
+                前端无需也不能手动指定桶信息。
+              </div>
+            </div>
+
+            <div class="side-item">
+              <div class="side-dot"></div>
+              <div>
+                <strong>访问链接形式：</strong>
+                上传成功后，本页会按 <code>当前域名 + /i/&lt;图片ID&gt;</code> 的规则生成访问 URL，
+                不依赖配置文件中的公共 URL。
+              </div>
+            </div>
+
+            <div class="side-item">
+              <div class="side-dot"></div>
+              <div>
+                <strong>安全与审查：</strong>
+                后端会根据配置进行 MIME 检查与图片审查，尽量避免脚本文件伪装成图片等绕过攻击。
+              </div>
+            </div>
+
+          </div>
+
+          <div class="result-card" id="result-card">
+            <div class="result-title">上传结果</div>
+
+            <div class="result-row">
+              <div class="result-label">文件名</div>
+              <div class="url-box" id="res-filename"></div>
+            </div>
+
+            <div class="result-row">
+              <div class="result-label">访问链接</div>
+              <div class="url-box" id="res-url"></div>
+              <button class="btn-mini" id="btn-copy-url">复制</button>
+              <button class="btn-mini" id="btn-open-url">打开</button>
+            </div>
+
+            <div class="result-row">
+              <div class="result-label">说明</div>
+              <div class="muted">
+                链接基于当前访问域名构造，例如
+                <code>https://当前域名/i/&lt;id&gt;</code>。如改变域名，只需更新前端访问域名即可。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部 -->
+      <div class="footer-row">
+        <div class="muted">
+          API：<code>POST /api/upload</code>，字段名 <code>file</code>（图片文件），
+          Turnstile token 字段名 <code>turnstile_token</code>（可选）。
+        </div>
+        <button class="btn-ghost" id="btn-goto-admin">
+          后台管理
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="panel">
-    <h3>使用说明</h3>
-    <ul>
-      <li>上传页只提供「单张图片上传」功能，具体存储桶由后端自动分配。</li>
-      <li>如启用 Turnstile，请先在后台填写 Site Key 和 Secret Key，并通过一次验证测试。</li>
-      <li>若访问上传或后台出现 500 错误，多半是初始化未完成或数据库异常，可尝试重新走安装。</li>
-    </ul>
-  </div>
-</div>
+  <script>
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("file-input");
+    const btnSelect = document.getElementById("btn-select");
+    const btnUpload = document.getElementById("btn-upload");
+    const tsTokenInput = document.getElementById("ts-token");
+
+    const preview = document.getElementById("preview");
+    const previewImg = document.getElementById("preview-img");
+    const previewName = document.getElementById("preview-name");
+    const previewMeta = document.getElementById("preview-meta");
+
+    const errorBox = document.getElementById("error-box");
+    const errorText = document.getElementById("error-text");
+
+    const resultCard = document.getElementById("result-card");
+    const resFilename = document.getElementById("res-filename");
+    const resUrl = document.getElementById("res-url");
+    const btnCopyUrl = document.getElementById("btn-copy-url");
+    const btnOpenUrl = document.getElementById("btn-open-url");
+    const btnGotoAdmin = document.getElementById("btn-goto-admin");
+
+    btnGotoAdmin.addEventListener("click", () => {
+      // 交给 /admin/ 登录页处理
+      window.location.href = "/admin/";
+    });
+
+    function showError(msg) {
+      if (!msg) {
+        errorBox.classList.remove("visible");
+        errorText.textContent = "";
+        return;
+      }
+      errorBox.classList.add("visible");
+      errorText.textContent = msg;
+    }
+
+    function formatSize(bytes) {
+      if (!bytes && bytes !== 0) return "";
+      const kb = bytes / 1024;
+      if (kb < 1024) return kb.toFixed(1) + " KB";
+      return (kb / 1024).toFixed(2) + " MB";
+    }
+
+    function resetResult() {
+      resultCard.style.display = "none";
+      resFilename.textContent = "";
+      resUrl.textContent = "";
+    }
+
+    function updatePreview(file) {
+      if (!file) {
+        preview.style.display = "none";
+        previewImg.src = "";
+        previewName.textContent = "";
+        previewMeta.textContent = "";
+        return;
+      }
+      preview.style.display = "flex";
+      previewName.textContent = file.name || "(未命名)";
+      previewMeta.textContent = formatSize(file.size) + " · " + (file.type || "未知类型");
+
+      if (file.type.startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        previewImg.src = url;
+      } else {
+        previewImg.src = "";
+      }
+    }
+
+    function getSelectedFile() {
+      return fileInput.files && fileInput.files[0];
+    }
+
+    function selectFile() {
+      fileInput.click();
+    }
+
+    btnSelect.addEventListener("click", (e) => {
+      e.preventDefault();
+      selectFile();
+    });
+
+    fileInput.addEventListener("change", () => {
+      showError("");
+      resetResult();
+      updatePreview(getSelectedFile());
+    });
+
+    dropzone.addEventListener("click", (e) => {
+      // 避免点击按钮时再次触发
+      if (e.target === btnSelect) return;
+      selectFile();
+    });
+
+    dropzone.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add("dragover");
+    });
+
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add("dragover");
+    });
+
+    dropzone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove("dragover");
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        showError("");
+        resetResult();
+        updatePreview(getSelectedFile());
+      }
+    });
+
+    function buildImageURL(id, providedUrl) {
+      if (providedUrl) return providedUrl;
+      if (!id) return "";
+      const origin = window.location.origin || "";
+      return origin + "/i/" + encodeURIComponent(id);
+    }
+
+    btnUpload.addEventListener("click", async () => {
+      showError("");
+      resetResult();
+
+      const file = getSelectedFile();
+      if (!file) {
+        showError("请先选择一张要上传的图片。");
+        return;
+      }
+
+      const form = new FormData();
+      form.append("file", file);
+      const token = tsTokenInput.value.trim();
+      if (token) {
+        // 与后端 Turnstile 中间件约定的字段名
+        form.append("turnstile_token", token);
+      }
+
+      btnUpload.disabled = true;
+      btnUpload.textContent = "上传中…";
+
+      try {
+        const resp = await fetch("/api/upload", {
+          method: "POST",
+          body: form,
+          credentials: "include"
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          showError("上传失败：" + (data.detail || data.error || resp.status));
+          return;
+        }
+
+        const id = data.id || data.image_id || data.uuid;
+        const url = buildImageURL(id, data.url);
+
+        if (!id || !url) {
+          showError("上传成功，但未能解析返回的图片 ID / 链接。");
+          return;
+        }
+
+        resFilename.textContent = file.name || "(未命名)";
+        resUrl.textContent = url;
+        resUrl.title = url;
+        resultCard.style.display = "flex";
+      } catch (e) {
+        showError("请求失败：" + e.message);
+      } finally {
+        btnUpload.disabled = false;
+        btnUpload.textContent = "开始上传";
+      }
+    });
+
+    btnCopyUrl.addEventListener("click", async () => {
+      const url = resUrl.textContent.trim();
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        const old = btnCopyUrl.textContent;
+        btnCopyUrl.textContent = "已复制";
+        setTimeout(() => { btnCopyUrl.textContent = old; }, 1200);
+      } catch (_) {
+        // 忽略剪贴板错误
+      }
+    });
+
+    btnOpenUrl.addEventListener("click", () => {
+      const url = resUrl.textContent.trim();
+      if (!url) return;
+      window.open(url, "_blank");
+    });
+  </script>
 </body>
 </html>

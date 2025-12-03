@@ -2,339 +2,709 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 初始化安装</title>
+  <title>Imagebed 初始安装</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at top, #e0f2fe 0, #eef2ff 40%, #f9fafb 100%);
+      --card-bg: rgba(255, 255, 255, 0.98);
+      --primary: #2563eb;
+      --primary-deep: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --danger: #dc2626;
+      --danger-soft: #fee2e2;
+      --border-soft: rgba(148, 163, 184, 0.35);
+      --shadow-soft: 0 24px 50px rgba(15, 23, 42, 0.18);
+      --radius-xl: 22px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --transition-fast: 160ms ease-out;
+    }
+
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
       margin: 0;
-      padding: 40px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      background: #f4f4f5;
-      color: #111827;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
     }
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 28px 24px 24px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      letter-spacing: 0.03em;
-    }
-    .subtitle {
-      margin: 0 0 18px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-    .steps {
+
+    body {
       display: flex;
       align-items: center;
-      font-size: 13px;
-      margin-bottom: 18px;
+      justify-content: center;
+      padding: 16px;
     }
-    .step-pill {
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
-      color: #6b7280;
-    }
-    .step-pill.active {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #ffffff;
-      font-weight: 600;
-    }
-    .steps .sep {
-      margin: 0 6px;
-      color: #9ca3af;
-    }
-    label {
-      display: block;
-      margin-top: 12px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    input {
+
+    .shell {
+      max-width: 880px;
       width: 100%;
-      margin-top: 4px;
-      padding: 9px 10px;
-      border-radius: 6px;
-      border: 1px solid #e5e7eb;
-      font-size: 14px;
+      background: transparent;
     }
-    input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 30px;
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 20px 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
-    .hint {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #9ca3af;
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
     }
-    .section-title {
-      font-size: 15px;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: conic-gradient(from 210deg, #1d4ed8, #22c55e, #0ea5e9, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 17px;
+      box-shadow: 0 6px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    .title-main {
+      font-size: 18px;
       font-weight: 600;
-      margin-top: 4px;
-      margin-bottom: 4px;
     }
-    .section-desc {
+
+    .title-sub {
       font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 10px;
+      color: var(--text-sub);
     }
-    .actions {
-      margin-top: 18px;
+
+    .header-right {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-align: right;
+    }
+
+    .step-indicator {
       display: flex;
       gap: 10px;
+      margin-top: 6px;
+    }
+
+    .step {
+      flex: 1;
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      display: flex;
       align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #6b7280;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--primary-soft), #e0f2fe);
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+
+    .step.active::before {
+      opacity: 1;
+    }
+
+    .step-inner {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1;
+    }
+
+    .step-index {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid #c4d4ff;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #4f46e5;
+    }
+
+    .step-label {
+      font-weight: 500;
+      color: #111827;
+    }
+
+    .step-badge {
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(248,250,252,0.9);
+      color: #6b7280;
+    }
+
+    .step.done .step-index {
+      background: #22c55e;
+      border-color: #16a34a;
+      color: #ffffff;
+    }
+
+    .step.done .step-badge {
+      border-color: #bbf7d0;
+      background: #ecfdf5;
+      color: #15803d;
+    }
+
+    .body {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-card {
+      border-radius: var(--radius-lg);
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      padding: 12px 12px 11px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .section-desc {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 3px;
+    }
+
+    label {
+      font-size: 12px;
+      color: #4b5563;
+      font-weight: 500;
+    }
+
+    label small {
+      color: #9ca3af;
+      font-weight: 400;
+    }
+
+    .input {
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 0 10px;
+      font-size: 13px;
+      background: #ffffff;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 1px #bfdbfe;
+    }
+
+    .input::placeholder {
+      color: #9ca3af;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
       flex-wrap: wrap;
     }
-    button {
-      padding: 9px 18px;
+
+    .btn-primary {
+      height: 34px;
       border-radius: 999px;
       border: none;
-      background: #2563eb;
-      color: #ffffff;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    button.secondary {
-      background: #6b7280;
-    }
-    button[disabled] {
-      opacity: 0.6;
-      cursor: default;
-    }
-    .msg {
-      margin-top: 10px;
+      padding: 0 16px;
       font-size: 13px;
-      display: none;
+      font-weight: 500;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.55);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+                  filter var(--transition-fast), opacity var(--transition-fast);
     }
-    .msg.error { color: #b91c1c; }
-    .msg.success { color: #15803d; }
-    .top-links {
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+      box-shadow: 0 16px 34px rgba(37, 99, 235, 0.6);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 9px 20px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-primary[disabled] {
+      opacity: 0.6;
+      box-shadow: none;
+      cursor: default;
+      transform: none;
+    }
+
+    .btn-secondary {
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 0 14px;
       font-size: 12px;
-      margin-bottom: 14px;
+      background: #ffffff;
+      color: #4b5563;
+      cursor: pointer;
+      transition: background-color var(--transition-fast), transform var(--transition-fast);
     }
-    .top-links a {
-      color: #2563eb;
+
+    .btn-secondary:hover {
+      background: #f3f4f6;
+      transform: translateY(-0.5px);
+    }
+
+    .hint-card {
+      border-radius: var(--radius-lg);
+      border: 1px dashed rgba(148,163,184,0.8);
+      background: #f9fafb;
+      padding: 12px 12px 10px;
+      font-size: 12px;
+      color: var(--text-sub);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hint-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .hint-item {
+      display: flex;
+      gap: 6px;
+    }
+
+    .hint-dot {
+      margin-top: 4px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #a5b4fc;
+      flex-shrink: 0;
+    }
+
+    .error-box {
+      margin-top: 8px;
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-radius: var(--radius-md);
+      border: 1px solid #fecaca;
+      padding: 8px 10px;
+    }
+
+    .error-box.visible {
+      display: flex;
+    }
+
+    .error-dot {
+      margin-top: 3px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--danger);
+      flex-shrink: 0;
+    }
+
+    .success-text {
+      color: #16a34a;
+      font-size: 12px;
+    }
+
+    .muted {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    a {
+      color: var(--primary-deep);
       text-decoration: none;
-      margin-right: 12px;
     }
-    .top-links a:hover { text-decoration: underline; }
-    .step-pane { display: none; }
-    .step-pane.active { display: block; }
+
+    a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="top-links">
-      <a href="/upload/">前往上传页</a>
-      <a href="/admin/">后台管理</a>
-    </div>
-    <h1>Imagebed 初始化安装</h1>
-    <p class="subtitle">
-      建议先完成数据库配置，测试通过后系统会自动建表并写入配置，
-      然后再设置管理员账号。R2 及 Turnstile 可在后台单独配置。
-    </p>
+  <div class="shell">
+    <div class="card">
+      <div class="header-row">
+        <div class="brand">
+          <div class="logo">Ib</div>
+          <div>
+            <div class="title-main">Imagebed 初始安装</div>
+            <div class="title-sub">
+              建议先完成数据库配置，再设置管理员账号。安装完成后可在后台配置 R2 与 Turnstile。
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div>安装向导 · 仅首次运行时可用</div>
+          <div class="muted">如果已经安装，请直接访问 <code>/admin/</code> 或根路径上传页。</div>
+        </div>
+      </div>
 
-    <div class="steps">
-      <span class="step-pill active" id="pill-step1">1. 配置数据库</span>
-      <span class="sep">→</span>
-      <span class="step-pill" id="pill-step2">2. 设置管理员</span>
-    </div>
+      <div class="step-indicator">
+        <div class="step active" id="step-db">
+          <div class="step-inner">
+            <div class="step-index">1</div>
+            <div>
+              <div class="step-label">配置数据库</div>
+              <div class="step-badge" id="step-db-badge">进行中</div>
+            </div>
+          </div>
+        </div>
+        <div class="step" id="step-admin">
+          <div class="step-inner">
+            <div class="step-index">2</div>
+            <div>
+              <div class="step-label">设置管理员</div>
+              <div class="step-badge" id="step-admin-badge">等待上一步</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <!-- Step 1 -->
-    <div id="step1" class="step-pane active">
-      <div class="section-title">步骤一：配置数据库</div>
-      <p class="section-desc">
-        只需填写数据库名称、用户和密码。系统默认连接
-        <code>127.0.0.1:5432</code>，<code>sslmode=disable</code>。
-      </p>
+      <div class="error-box" id="global-error">
+        <div class="error-dot"></div>
+        <div id="global-error-text"></div>
+      </div>
 
-      <form id="db-form">
-        <label for="db-name">数据库名称</label>
-        <input id="db-name" name="db_name" placeholder="例如：imagebed" autocomplete="off" />
-        <div class="hint">
-          会自动拼接为：
-          <code>postgres://user:pass@127.0.0.1:5432/&lt;数据库名称&gt;?sslmode=disable</code>
+      <div class="body">
+        <!-- 左侧：表单 -->
+        <div>
+          <!-- 步骤一：数据库 -->
+          <div class="form-card" id="section-db">
+            <div class="section-title">步骤一：配置数据库</div>
+            <div class="section-desc">
+              只需填写数据库名称、用户和密码。系统会自动拼接 DSN 并连接
+              <code>127.0.0.1:5432</code>（<code>sslmode=disable</code>），然后初始化数据表。
+            </div>
+
+            <div class="field">
+              <label for="db-name">数据库名称</label>
+              <input id="db-name" class="input" placeholder="例如：imagebed" />
+            </div>
+
+            <div class="field">
+              <label for="db-user">数据库用户</label>
+              <input id="db-user" class="input" placeholder="例如：imagebed" />
+            </div>
+
+            <div class="field">
+              <label for="db-pass">数据库密码</label>
+              <input id="db-pass" type="password" class="input" placeholder="请输入该用户密码" />
+            </div>
+
+            <div class="btn-row">
+              <button class="btn-primary" id="btn-save-db">
+                测试并保存数据库配置
+              </button>
+              <button class="btn-secondary" id="btn-next-1" disabled>下一步：设置管理员</button>
+            </div>
+
+            <div class="muted" id="db-success-text" style="margin-top:4px;"></div>
+          </div>
+
+          <!-- 步骤二：管理员 -->
+          <div class="form-card" id="section-admin" style="margin-top:10px; opacity:0.5; pointer-events:none;">
+            <div class="section-title">步骤二：设置管理员账号</div>
+            <div class="section-desc">
+              用于登录后台控制台 <code>/admin/</code>。密码会采用 <code>bcrypt</code> 加密存入数据库。
+            </div>
+
+            <div class="field">
+              <label for="admin-name">管理员用户名</label>
+              <input id="admin-name" class="input" placeholder="默认建议：admin" />
+            </div>
+
+            <div class="field">
+              <label for="admin-pass">管理员密码</label>
+              <input id="admin-pass" type="password" class="input" placeholder="请设置一个安全的密码" />
+            </div>
+
+            <div class="btn-row">
+              <button class="btn-secondary" id="btn-back-2">返回上一步</button>
+              <button class="btn-primary" id="btn-save-admin">完成安装</button>
+            </div>
+
+            <div class="muted" style="margin-top:4px;">
+              安装成功后，<strong>/setup</strong> 将自动失效并返回 404，避免重复初始化。
+            </div>
+          </div>
         </div>
 
-        <label for="db-user">数据库用户</label>
-        <input id="db-user" name="db_user" placeholder="例如：imagebed" autocomplete="off" />
+        <!-- 右侧：提示说明 -->
+        <div class="hint-card">
+          <div class="hint-title">安装小贴士</div>
 
-        <label for="db-pass">数据库密码</label>
-        <input id="db-pass" name="db_password" type="password" placeholder="请输入该用户密码" autocomplete="off" />
+          <div class="hint-item">
+            <div class="hint-dot"></div>
+            <div>
+              <strong>数据库权限：</strong> 建议为该项目创建单独的 PostgreSQL 用户与数据库，
+              用户需具备在该库内创建表的权限。
+            </div>
+          </div>
 
-        <div class="actions">
-          <button type="submit" id="db-submit">测试并保存数据库配置</button>
+          <div class="hint-item">
+            <div class="hint-dot"></div>
+            <div>
+              <strong>R2 与 Turnstile：</strong> 为了安装流程更简单，向导只要求数据库。
+              安装完成后请登录 <code>/admin/</code> 在控制台中配置 R2 桶与 Cloudflare Turnstile。
+            </div>
+          </div>
+
+          <div class="hint-item">
+            <div class="hint-dot"></div>
+            <div>
+              <strong>重复执行安全：</strong> 数据库初始化使用 <code>IF NOT EXISTS</code>，
+              再次执行不会破坏已有表结构；管理员步骤会对 <code>admins</code> 表进行重建，
+              以保证结构正确。
+            </div>
+          </div>
+
+          <div class="hint-item">
+            <div class="hint-dot"></div>
+            <div>
+              <strong>遇到错误：</strong> 可在服务器上查看
+              <code>journalctl -u imagebed.service</code> 日志，获取更详细的信息。
+            </div>
+          </div>
+
         </div>
-        <div id="db-msg" class="msg"></div>
-      </form>
-    </div>
-
-    <!-- Step 2 -->
-    <div id="step2" class="step-pane">
-      <div class="section-title">步骤二：设置管理员账号</div>
-      <p class="section-desc">
-        数据库连接通过后，再设置后台登录的管理员账号。该账号会写入
-        <code>admins</code> 表。
-      </p>
-
-      <form id="admin-form">
-        <label for="admin-user">管理员用户名</label>
-        <input id="admin-user" name="admin_username" placeholder="例如：admin" autocomplete="off" />
-
-        <label for="admin-pass">管理员密码</label>
-        <input id="admin-pass" name="admin_password" type="password" placeholder="请设置一个强密码" autocomplete="off" />
-
-        <div class="actions">
-          <button type="button" class="secondary" id="btn-back">返回上一步</button>
-          <button type="submit" id="admin-submit">完成安装</button>
-        </div>
-        <div id="admin-msg" class="msg"></div>
-      </form>
+      </div>
     </div>
   </div>
 
   <script>
-    const pill1 = document.getElementById("pill-step1");
-    const pill2 = document.getElementById("pill-step2");
-    const step1 = document.getElementById("step1");
-    const step2 = document.getElementById("step2");
-    const dbForm = document.getElementById("db-form");
-    const adminForm = document.getElementById("admin-form");
-    const dbMsg = document.getElementById("db-msg");
-    const adminMsg = document.getElementById("admin-msg");
-    const adminSubmit = document.getElementById("admin-submit");
-    const btnBack = document.getElementById("btn-back");
-    const dbSubmit = document.getElementById("db-submit");
+    const API_DB = "/api/setup/database";
+    const API_ADMIN = "/api/setup/admin";
 
-    let dbConfigured = false;
+    const stepDb = document.getElementById("step-db");
+    const stepAdmin = document.getElementById("step-admin");
+    const stepDbBadge = document.getElementById("step-db-badge");
+    const stepAdminBadge = document.getElementById("step-admin-badge");
 
-    function showStep(n) {
-      if (n === 1) {
-        step1.classList.add("active");
-        step2.classList.remove("active");
-        pill1.classList.add("active");
-        pill2.classList.remove("active");
+    const sectionDb = document.getElementById("section-db");
+    const sectionAdmin = document.getElementById("section-admin");
+
+    const dbName = document.getElementById("db-name");
+    const dbUser = document.getElementById("db-user");
+    const dbPass = document.getElementById("db-pass");
+    const btnSaveDb = document.getElementById("btn-save-db");
+    const btnNext1 = document.getElementById("btn-next-1");
+    const dbSuccessText = document.getElementById("db-success-text");
+
+    const adminName = document.getElementById("admin-name");
+    const adminPass = document.getElementById("admin-pass");
+    const btnBack2 = document.getElementById("btn-back-2");
+    const btnSaveAdmin = document.getElementById("btn-save-admin");
+
+    const errorBox = document.getElementById("global-error");
+    const errorText = document.getElementById("global-error-text");
+
+    function showError(msg) {
+      if (!msg) {
+        errorBox.classList.remove("visible");
+        errorText.textContent = "";
+        return;
+      }
+      errorBox.classList.add("visible");
+      errorText.textContent = msg;
+    }
+
+    function goStep(step) {
+      if (step === 1) {
+        stepDb.classList.add("active");
+        stepAdmin.classList.remove("active");
       } else {
-        step1.classList.remove("active");
-        step2.classList.add("active");
-        pill1.classList.remove("active");
-        pill2.classList.add("active");
+        stepDb.classList.add("done");
+        stepDb.classList.remove("active");
+        stepAdmin.classList.add("active");
       }
     }
 
-    function showMsg(el, type, text) {
-      el.textContent = text;
-      el.className = "msg " + type;
-      el.style.display = "block";
+    function enableAdminSection(enable) {
+      if (enable) {
+        sectionAdmin.style.opacity = "1";
+        sectionAdmin.style.pointerEvents = "auto";
+        stepAdminBadge.textContent = "可以继续";
+      } else {
+        sectionAdmin.style.opacity = "0.5";
+        sectionAdmin.style.pointerEvents = "none";
+        stepAdminBadge.textContent = "等待上一步";
+      }
     }
 
-    dbForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      dbMsg.style.display = "none";
-
-      const dbName = document.getElementById("db-name").value.trim();
-      const dbUser = document.getElementById("db-user").value.trim();
-      const dbPass = document.getElementById("db-pass").value.trim();
-
-      if (!dbName || !dbUser || !dbPass) {
-        showMsg(dbMsg, "error", "数据库名称、用户和密码均不能为空。");
+    btnSaveDb.addEventListener("click", async () => {
+      showError("");
+      dbSuccessText.textContent = "";
+      const name = dbName.value.trim();
+      const user = dbUser.value.trim();
+      const pass = dbPass.value.trim();
+      if (!name || !user || !pass) {
+        showError("请完整填写数据库名称、用户与密码。");
         return;
       }
 
-      const payload = { db_name: dbName, db_user: dbUser, db_password: dbPass };
-
-      dbSubmit.disabled = true;
-      dbSubmit.textContent = "测试中...";
+      btnSaveDb.disabled = true;
+      btnSaveDb.textContent = "测试连接中…";
 
       try {
-        const res = await fetch("/api/setup/database", {
+        const resp = await fetch(API_DB, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            db_name: name,
+            db_user: user,
+            db_password: pass
+          })
         });
-        const json = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-          const msg = json.detail || json.error || "数据库测试或初始化失败，请检查配置。";
-          showMsg(dbMsg, "error", msg);
-          dbConfigured = false;
-          adminSubmit.disabled = true;
-        } else {
-          dbConfigured = true;
-          showMsg(dbMsg, "success", "数据库连接成功，表结构已初始化并写入配置。");
-          adminSubmit.disabled = false;
-          showStep(2); // 自动切换到第二步
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          if (data.error === "already_installed") {
+            showError("系统已安装，请直接访问根路径或 /admin/。");
+          } else {
+            showError("数据库配置失败：" + (data.detail || data.error || resp.status));
+          }
+          return;
         }
-      } catch (err) {
-        showMsg(dbMsg, "error", "请求失败：" + err);
-        dbConfigured = false;
-        adminSubmit.disabled = true;
+
+        stepDbBadge.textContent = "已完成";
+        dbSuccessText.innerHTML =
+          '<span class="success-text">数据库连接与初始化成功。</span> ' +
+          '配置已写入服务器上的 <code>config.json</code>，接下来请设置管理员账号。';
+
+        enableAdminSection(true);
+        btnNext1.disabled = false;
+        goStep(2);
+      } catch (e) {
+        showError("请求失败：" + e.message);
       } finally {
-        dbSubmit.disabled = false;
-        dbSubmit.textContent = "测试并保存数据库配置";
+        btnSaveDb.disabled = false;
+        btnSaveDb.textContent = "测试并保存数据库配置";
       }
     });
 
-    btnBack.addEventListener("click", () => {
-      // 只是界面返回，不会撤销已经保存的数据库配置
-      showStep(1);
+    btnNext1.addEventListener("click", () => {
+      goStep(2);
     });
 
-    adminForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      adminMsg.style.display = "none";
+    btnBack2.addEventListener("click", () => {
+      goStep(1);
+    });
 
-      if (!dbConfigured) {
-        showMsg(adminMsg, "error", "请先完成数据库配置并测试通过。");
+    btnSaveAdmin.addEventListener("click", async () => {
+      showError("");
+      const name = adminName.value.trim();
+      const pass = adminPass.value.trim();
+      if (!name || !pass) {
+        showError("请填写管理员用户名与密码。");
         return;
       }
 
-      const adminUser = document.getElementById("admin-user").value.trim();
-      const adminPass = document.getElementById("admin-pass").value.trim();
-
-      if (!adminUser || !adminPass) {
-        showMsg(adminMsg, "error", "管理员用户名和密码均不能为空。");
-        return;
-      }
-
-      const payload = { admin_username: adminUser, admin_password: adminPass };
-
-      adminSubmit.disabled = true;
-      adminSubmit.textContent = "正在完成安装...";
+      btnSaveAdmin.disabled = true;
+      btnSaveAdmin.textContent = "创建管理员中…";
 
       try {
-        const res = await fetch("/api/setup/admin", {
+        const resp = await fetch(API_ADMIN, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            admin_username: name,
+            admin_password: pass
+          })
         });
-        const json = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-          const msg = json.detail || json.error || "创建管理员账号失败，请检查日志。";
-          showMsg(adminMsg, "error", msg);
-        } else {
-          showMsg(adminMsg, "success", "安装完成！即将跳转到上传页面。");
-          setTimeout(() => {
-            window.location.href = "/upload/";
-          }, 2000);
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          if (data.error === "already_installed") {
+            showError("系统已安装，请直接访问根路径或 /admin/。");
+          } else {
+            showError("创建管理员失败：" + (data.detail || data.error || resp.status));
+          }
+          return;
         }
-      } catch (err) {
-        showMsg(adminMsg, "error", "请求失败：" + err);
+
+        stepAdminBadge.textContent = "安装完成";
+        alert("安装完成！现在可以访问根路径上传页或 /admin/ 后台管理。");
+        window.location.href = "/";
+      } catch (e) {
+        showError("请求失败：" + e.message);
       } finally {
-        adminSubmit.disabled = false;
-        adminSubmit.textContent = "完成安装";
+        btnSaveAdmin.disabled = false;
+        btnSaveAdmin.textContent = "完成安装";
       }
     });
   </script>

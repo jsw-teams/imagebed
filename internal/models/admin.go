@@ -18,7 +18,7 @@ type Admin struct {
 	CreatedAt    time.Time
 }
 
-// ensureAdminTable：用于运行期（登录校验）保证表存在，**不动已有数据结构**
+// ensureAdminTable：正常运行时保证 admins 表存在（不破坏已有数据）
 func ensureAdminTable(ctx context.Context, pool *pgxpool.Pool) error {
 	if pool == nil {
 		return errors.New("nil db pool")
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS admins (
 	return err
 }
 
-// EnsureInitialAdmin：仅在「初始化安装第二步」调用。
-// 这里我们可以比较激进：直接 DROP 掉旧的 admins 表，再用正确结构重建，然后插入管理员。
+// EnsureInitialAdmin：初始化安装（/setup 第二步）时调用。
+// 这里直接 DROP + 重建 admins 表，然后插入管理员账号，保证结构永远正确。
 func EnsureInitialAdmin(ctx context.Context, pool *pgxpool.Pool, username, password string) error {
 	if pool == nil {
 		return errors.New("nil db pool")
@@ -45,7 +45,7 @@ func EnsureInitialAdmin(ctx context.Context, pool *pgxpool.Pool, username, passw
 		return errors.New("username/password cannot be empty")
 	}
 
-	// 1) 强制重建 admins 表，保证结构正确
+	// 1) 强制重建 admins 表
 	_, err := pool.Exec(ctx, `
 DROP TABLE IF EXISTS admins;
 
@@ -66,7 +66,7 @@ CREATE TABLE admins (
 		return err
 	}
 
-	// 3) 插入（或覆盖）管理员账号
+	// 3) 插入或更新管理员账号
 	_, err = pool.Exec(ctx, `
 INSERT INTO admins (username, password_hash)
 VALUES ($1, $2)
@@ -97,13 +97,11 @@ WHERE username = $1;
 `, username).Scan(&hash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// 用户名不存在
 			return false, nil
 		}
 		return false, err
 	}
 
-	// 对比密码
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
 		return false, nil
 	}
