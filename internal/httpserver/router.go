@@ -44,7 +44,6 @@ type Server struct {
 }
 
 // NewServer 使用给定的配置创建 HTTP 服务器。
-// cfg 通常由 config.Load(configPath) 得到。
 func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 	if cfg.HTTP.Addr == "" {
 		cfg.HTTP.Addr = ":9000"
@@ -144,24 +143,22 @@ func (s *Server) getDB() *pgxpool.Pool {
 	return s.db
 }
 
-// 从 embed.FS 中读取 HTML 并返回
-func serveEmbeddedHTML(c *gin.Context, path string) {
+// 通用：从 embed.FS 读取任意文件并返回
+func serveEmbeddedFile(c *gin.Context, path, contentType string) {
 	data, err := webui.FS.ReadFile(path)
 	if err != nil {
 		c.String(http.StatusNotFound, "not found")
 		return
 	}
-	c.Data(http.StatusOK, "text/html; charset=utf-8", data)
-}
-
-// 从 embed.FS 中读取静态资源（CSS / JS）并返回
-func serveEmbeddedAsset(c *gin.Context, path, contentType string) {
-	data, err := webui.FS.ReadFile(path)
-	if err != nil {
-		c.Status(http.StatusNotFound)
-		return
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
 	c.Data(http.StatusOK, contentType, data)
+}
+
+// HTML 包装
+func serveEmbeddedHTML(c *gin.Context, path string) {
+	serveEmbeddedFile(c, path, "text/html; charset=utf-8")
 }
 
 // buildEngine 构建 gin.Engine 和所有路由
@@ -173,9 +170,7 @@ func (s *Server) buildEngine() {
 
 	// ---------- 前端路由 ----------
 
-	// 根路径：
-	//   未安装 -> /setup
-	//   已安装 -> 内嵌的 web/index.html（上传页）
+	// 根路径
 	r.GET("/", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -184,7 +179,7 @@ func (s *Server) buildEngine() {
 		serveEmbeddedHTML(c, "index.html")
 	})
 
-	// 保留 /upload 兼容：已安装时同样渲染 index.html
+	// /upload 兼容
 	r.GET("/upload", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -196,11 +191,11 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/upload")
 	})
 
-	// 初始化安装页面：仅未安装时可访问；已安装后强制 404，禁止再次初始化
+	// 初始化安装页面：仅未安装时可访问；已安装后 404
 	r.GET("/setup", s.serveSetupPage)
 	r.GET("/setup/", s.serveSetupPage)
 
-	// 管理后台登录页：未安装时跳转 /setup
+	// 管理后台登录页
 	r.GET("/admin", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -212,7 +207,7 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/admin")
 	})
 
-	// 管理后台 dashboard 页面
+	// 管理后台 dashboard
 	r.GET("/admin/dashboard", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -224,38 +219,38 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/admin/dashboard")
 	})
 
-	// ---------- 前端静态资源（CSS / JS） ----------
+	// --------- 静态资源：CSS / JS（从 embed.FS 提供） ---------
 
-	// 上传页资源
+	// 根上传页
 	r.GET("/index.css", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "index.css", "text/css; charset=utf-8")
+		serveEmbeddedFile(c, "index.css", "text/css; charset=utf-8")
 	})
 	r.GET("/index.js", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "index.js", "application/javascript; charset=utf-8")
+		serveEmbeddedFile(c, "index.js", "application/javascript; charset=utf-8")
 	})
 
-	// 管理后台登录页资源
+	// 登录页 /admin
 	r.GET("/admin/index.css", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "admin/index.css", "text/css; charset=utf-8")
+		serveEmbeddedFile(c, "admin/index.css", "text/css; charset=utf-8")
 	})
 	r.GET("/admin/index.js", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "admin/index.js", "application/javascript; charset=utf-8")
+		serveEmbeddedFile(c, "admin/index.js", "application/javascript; charset=utf-8")
 	})
 
-	// 管理后台 dashboard 资源
+	// Dashboard 页 /admin/dashboard
 	r.GET("/admin/dashboard.css", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "admin/dashboard.css", "text/css; charset=utf-8")
+		serveEmbeddedFile(c, "admin/dashboard.css", "text/css; charset=utf-8")
 	})
 	r.GET("/admin/dashboard.js", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "admin/dashboard.js", "application/javascript; charset=utf-8")
+		serveEmbeddedFile(c, "admin/dashboard.js", "application/javascript; charset=utf-8")
 	})
 
-	// 安装向导资源
+	// 安装向导 /setup
 	r.GET("/setup/index.css", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "setup/index.css", "text/css; charset=utf-8")
+		serveEmbeddedFile(c, "setup/index.css", "text/css; charset=utf-8")
 	})
 	r.GET("/setup/index.js", func(c *gin.Context) {
-		serveEmbeddedAsset(c, "setup/index.js", "application/javascript; charset=utf-8")
+		serveEmbeddedFile(c, "setup/index.js", "application/javascript; charset=utf-8")
 	})
 
 	// 健康检查（不依赖安装状态）
@@ -315,7 +310,7 @@ func (s *Server) buildEngine() {
 			adminSec.PUT("/buckets/:id", s.bucketHandler.UpdateBucket)
 			adminSec.DELETE("/buckets/:id", s.bucketHandler.DeleteBucket)
 
-			// Turnstile 配置（后台管理）
+			// Turnstile 配置
 			adminSec.GET("/turnstile", s.handleAdminGetTurnstile)
 			adminSec.POST("/turnstile", s.handleAdminUpdateTurnstile)
 			adminSec.POST("/turnstile/test", s.handleAdminTestTurnstile)
@@ -343,7 +338,7 @@ func (s *Server) buildEngine() {
 	s.engine = r
 }
 
-// 初始化页面：未安装才可以访问；已安装直接 404，禁止再次进入安装向导
+// 初始化页面：未安装才可以访问；已安装直接 404
 func (s *Server) serveSetupPage(c *gin.Context) {
 	if s.IsInstalled() {
 		c.AbortWithStatus(http.StatusNotFound)
