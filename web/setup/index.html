@@ -2,155 +2,81 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 初始安装</title>
+  <title>Imagebed 安装向导</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 图床首次安装向导，用于配置数据库和管理员账号。" />
+  <meta name="description" content="Imagebed 图床安装向导，配置数据库并创建管理员账号。" />
   <link rel="stylesheet" href="/setup/index.css" />
 </head>
 <body>
   <div class="shell">
-    <div class="card">
-      <div class="header-row">
-        <div class="brand">
-          <div class="logo">Ib</div>
-          <div>
-            <div class="title-main">Imagebed 初始安装</div>
-            <div class="title-sub">
-              先配置数据库，再设置管理员账号。
-            </div>
-          </div>
-        </div>
-        <div class="header-right">
-          <div>安装向导 · 首次运行可用</div>
-          <div class="muted">已安装可直接访问 <code>/admin/</code> 或根路径。</div>
+    <header class="header">
+      <div class="brand">
+        <div class="brand-logo">Ib</div>
+        <div class="brand-text">
+          <div class="brand-title">Imagebed 安装</div>
+          <div class="brand-sub">完成数据库与管理员配置后即可使用。</div>
         </div>
       </div>
+    </header>
 
-      <div class="step-indicator">
-        <div class="step active" id="step-db">
-          <div class="step-inner">
-            <div class="step-index">1</div>
-            <div>
-              <div class="step-label">配置数据库</div>
-              <div class="step-badge" id="step-db-badge">进行中</div>
-            </div>
-          </div>
-        </div>
-        <div class="step" id="step-admin">
-          <div class="step-inner">
-            <div class="step-index">2</div>
-            <div>
-              <div class="step-label">设置管理员</div>
-              <div class="step-badge" id="step-admin-badge">等待上一步</div>
-            </div>
-          </div>
-        </div>
+    <nav class="steps">
+      <div id="step-db" class="step step-active">
+        <div class="step-index">1</div>
+        <div class="step-text">数据库</div>
       </div>
-
-      <div class="error-box" id="global-error">
-        <div class="error-dot"></div>
-        <div id="global-error-text"></div>
+      <div id="step-admin" class="step">
+        <div class="step-index">2</div>
+        <div class="step-text">管理员</div>
       </div>
+    </nav>
 
-      <div class="body">
-        <div>
-          <!-- 步骤一：数据库 -->
-          <div class="form-card" id="section-db">
-            <div class="section-title">步骤一：配置数据库</div>
-            <div class="section-desc">
-              只需填写数据库名称、用户和密码，系统会自动连接
-              <code>127.0.0.1:5432</code> 并初始化数据表。
-            </div>
+    <div id="setup-status" class="status"></div>
 
+    <main class="content">
+      <section id="panel-db" class="panel panel-active">
+        <div class="card">
+          <h2 class="card-title">配置数据库</h2>
+          <form id="db-form" class="form">
             <div class="field">
               <label for="db-name">数据库名称</label>
               <input id="db-name" class="input" placeholder="例如：imagebed" />
             </div>
-
             <div class="field">
               <label for="db-user">数据库用户</label>
               <input id="db-user" class="input" placeholder="例如：imagebed" />
             </div>
-
             <div class="field">
               <label for="db-pass">数据库密码</label>
-              <input id="db-pass" type="password" class="input" placeholder="请输入该用户密码" />
+              <input id="db-pass" type="password" class="input" placeholder="填写该用户密码" />
             </div>
-
-            <div class="btn-row">
-              <button class="btn-primary" id="btn-save-db">测试并保存数据库配置</button>
-              <button class="btn-secondary" id="btn-next-1" disabled>下一步：设置管理员</button>
+            <div class="button-row">
+              <button type="submit" id="btn-db-save" class="btn-primary">测试并保存</button>
             </div>
+          </form>
+        </div>
+      </section>
 
-            <div class="muted" id="db-success-text" style="margin-top:4px;"></div>
-          </div>
-
-          <!-- 步骤二：管理员 -->
-          <div class="form-card" id="section-admin"
-               style="margin-top:10px; opacity:0.5; pointer-events:none;">
-            <div class="section-title">步骤二：设置管理员账号</div>
-            <div class="section-desc">
-              用于登录后台 <code>/admin/</code>，密码会加密存入数据库。
-            </div>
-
+      <section id="panel-admin" class="panel">
+        <div class="card">
+          <h2 class="card-title">创建管理员</h2>
+          <form id="admin-form" class="form">
             <div class="field">
               <label for="admin-name">管理员用户名</label>
-              <input id="admin-name" class="input" placeholder="默认建议：admin" />
+              <input id="admin-name" class="input" placeholder="默认可用：admin" />
             </div>
-
             <div class="field">
               <label for="admin-pass">管理员密码</label>
-              <input id="admin-pass" type="password" class="input" placeholder="请设置一个安全的密码" />
+              <input id="admin-pass" type="password" class="input" placeholder="设置一个安全密码" />
             </div>
-
-            <div class="btn-row">
-              <button class="btn-secondary" id="btn-back-2">返回上一步</button>
-              <button class="btn-primary" id="btn-save-admin">完成安装</button>
+            <div class="button-row">
+              <button type="button" id="btn-admin-back" class="btn-ghost">上一步</button>
+              <button type="submit" id="btn-admin-save" class="btn-primary">完成安装</button>
             </div>
-
-            <div class="muted" style="margin-top:4px;">
-              安装成功后，<strong>/setup</strong> 将自动失效并返回 404。
-            </div>
-          </div>
+          </form>
         </div>
-
-        <!-- 右侧提示 -->
-        <div class="hint-card">
-          <div class="hint-title">安装说明</div>
-
-          <div class="hint-item">
-            <div class="hint-dot"></div>
-            <div>
-              <strong>数据库权限：</strong> 为该项目创建单独的 PostgreSQL 用户与数据库。
-            </div>
-          </div>
-
-          <div class="hint-item">
-            <div class="hint-dot"></div>
-            <div>
-              <strong>R2 与 Turnstile：</strong> 安装阶段只要求数据库，其它在后台配置。
-            </div>
-          </div>
-
-          <div class="hint-item">
-            <div class="hint-dot"></div>
-            <div>
-              <strong>重复执行：</strong> 迁移脚本使用 <code>IF NOT EXISTS</code>，多次执行安全。
-            </div>
-          </div>
-
-          <div class="hint-item">
-            <div class="hint-dot"></div>
-            <div>
-              <strong>日志：</strong> 出现错误可在服务器查看
-              <code>journalctl -u imagebed.service</code>。
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </section>
+    </main>
   </div>
-
   <script src="/setup/index.js"></script>
 </body>
 </html>
