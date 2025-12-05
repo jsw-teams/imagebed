@@ -22,8 +22,8 @@
           <div class="avatar-circle" id="avatar-circle">A</div>
           <span id="user-name">Admin</span>
         </div>
-        <button class="btn-ghost-small" id="btn-to-upload">打开上传页</button>
-        <button class="btn-ghost-small" id="btn-logout">退出登录</button>
+        <button class="btn-ghost-small" id="btn-to-upload" type="button">打开上传页</button>
+        <button class="btn-ghost-small" id="btn-logout" type="button">退出登录</button>
       </div>
     </header>
 
@@ -34,7 +34,7 @@
           <div class="stat-card">
             <div class="stat-name">运行状态</div>
             <div class="stat-value" id="stat-health">未知</div>
-            <div class="stat-tag" id="stat-health-tag">正在检测 /healthz …</div>
+            <div class="stat-tag" id="stat-health-tag">正在检测 /healthz…</div>
           </div>
         </div>
 
@@ -68,13 +68,13 @@
           </div>
 
           <div class="toolbar">
-            <button class="btn-primary" id="btn-new-bucket">新建存储桶</button>
-            <button class="btn-secondary" id="btn-refresh-bucket">刷新列表</button>
+            <button class="btn-primary" id="btn-new-bucket" type="button">新建存储桶</button>
+            <button class="btn-secondary" id="btn-refresh-bucket" type="button">刷新列表</button>
           </div>
 
           <div class="panel">
-            <span>配额单位为字节，原样写入后端。自动分桶由后端配置控制。</span>
-            <span class="small-muted">显示名称与 R2 桶名可区分设置。</span>
+            <span>最大配额以 <strong>GB</strong> 为单位填写，保存配置时会自动换算为字节写入后端。</span>
+            <span class="small-muted">显示名称与 R2 桶名可区分设置；配额留空表示不限制。</span>
           </div>
 
           <div class="table-wrap">
@@ -83,14 +83,16 @@
                 <tr>
                   <th>显示名称</th>
                   <th>R2 桶名</th>
-                  <th>配额</th>
+                  <th>配额（后端以字节存储）</th>
                   <th>已用</th>
                   <th>状态</th>
                   <th style="width:140px;">操作</th>
                 </tr>
               </thead>
               <tbody id="bucket-tbody">
-                <tr><td colspan="6" style="text-align:center;color:#9ca3af;">正在加载…</td></tr>
+                <tr>
+                  <td colspan="6" style="text-align:center;color:#9ca3af;">正在加载…</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -101,7 +103,7 @@
             <span class="small-muted" id="bucket-form-mode">当前模式：新建</span>
           </div>
 
-          <div class="form-grid">
+          <div class="form-grid" id="bucket-form">
             <div class="field">
               <label class="field-label" for="bf-name">显示名称</label>
               <input id="bf-name" class="input" placeholder="例如：默认图床" />
@@ -111,14 +113,14 @@
               <input id="bf-r2" class="input" placeholder="例如：imgbed" />
             </div>
             <div class="field">
-              <label class="field-label" for="bf-max">最大配额（字节）</label>
-              <input id="bf-max" class="input" placeholder="例如：1073741824" />
+              <label class="field-label" for="bf-max">最大配额（GB）</label>
+              <input id="bf-max" class="input" inputmode="decimal" placeholder="例如：10（表示 10 GB，留空为不限制）" />
             </div>
           </div>
 
           <div class="toolbar" style="margin-top:2px;">
-            <button class="btn-primary" id="btn-save-bucket">保存配置</button>
-            <button class="btn-secondary" id="btn-reset-bucket">重置表单</button>
+            <button class="btn-primary" id="btn-save-bucket" type="button">保存配置</button>
+            <button class="btn-secondary" id="btn-reset-bucket" type="button">重置表单</button>
           </div>
         </div>
 
@@ -172,8 +174,8 @@
           </div>
 
           <div class="toolbar" style="margin-top:2px;">
-            <button class="btn-primary" id="btn-save-ts">测试并保存配置</button>
-            <button class="btn-secondary" id="btn-refresh-ts">重新读取配置</button>
+            <button class="btn-primary" id="btn-save-ts" type="button">保存配置</button>
+            <button class="btn-secondary" id="btn-refresh-ts" type="button">重新读取配置</button>
           </div>
         </div>
       </section>
