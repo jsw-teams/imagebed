@@ -5,77 +5,45 @@
   <title>Imagebed 管理后台登录</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
+  <meta name="description" content="登录 Imagebed 管理后台。" />
   <link rel="stylesheet" href="/admin/index.css" />
-  <script src="/admin/index.js" defer></script>
 </head>
 <body>
-  <div class="shell">
-    <div>
-      <div class="brand-row">
-        <div class="brand-left">
-          <div class="logo">Ib</div>
+  <div class="ad-shell">
+    <div class="ad-card">
+      <header class="ad-header">
+        <div class="ad-brand">
+          <div class="ad-logo">Ib</div>
           <div>
-            <div class="brand-text-main">Imagebed 管理后台</div>
-            <div class="brand-text-sub">仅管理员可访问。</div>
+            <div class="ad-title">Imagebed 管理后台</div>
+            <div class="ad-sub">登录以管理桶与上传策略。</div>
           </div>
         </div>
-        <span class="badge" id="badge-state">未登录</span>
-      </div>
-
-      <div class="title-block">
-        <h1>管理员登录</h1>
-        <p>使用安装时设置的账号密码登录后台控制台。</p>
-      </div>
-    </div>
-
-    <div class="error-box" id="error-box">
-      <div class="error-dot"></div>
-      <div id="error-text"></div>
-    </div>
-
-    <form class="form" id="login-form">
-      <div class="field">
-        <div class="field-label-row">
-          <label class="field-label" for="username">用户名</label>
-          <span class="field-hint">例如：<code>admin</code></span>
+      </header>
+      <main class="ad-main">
+        <div class="ad-field">
+          <label for="username">用户名</label>
+          <input id="username" class="ad-input" autocomplete="username" />
         </div>
-        <input
-          id="username"
-          class="input"
-          type="text"
-          name="username"
-          autocomplete="username"
-          placeholder="请输入管理员用户名"
-        />
-      </div>
-
-      <div class="field">
-        <div class="field-label-row">
-          <label class="field-label" for="password">密码</label>
+        <div class="ad-field">
+          <label for="password">密码</label>
+          <input id="password" class="ad-input" type="password" autocomplete="current-password" />
         </div>
-        <input
-          id="password"
-          class="input"
-          type="password"
-          name="password"
-          autocomplete="current-password"
-          placeholder="请输入管理员密码"
-        />
-      </div>
-
-      <!-- Turnstile 容器，只有启用时才会在 JS 中显示 / 渲染 -->
-      <div id="ts-wrap" style="display:none; margin-top:6px;">
-        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">人机验证</div>
-        <div id="ts-container"></div>
-      </div>
-
-      <div class="actions-row">
-        <button type="submit" id="btn-login" class="btn-primary">
-          <span>登录后台</span>
-        </button>
-        <button type="button" id="btn-clear" class="btn-ghost">清空</button>
-      </div>
-    </form>
+        <button id="btn-login" class="ad-btn ad-btn-primary">登录</button>
+        <div id="status" class="ad-status"></div>
+      </main>
+    </div>
   </div>
+
+  <div id="ts-overlay" class="ad-ts-overlay" style="display:none;">
+    <div class="ad-ts-modal">
+      <button id="ts-close" class="ad-ts-close" aria-label="关闭验证">×</button>
+      <div class="ad-ts-title">请完成人机验证</div>
+      <div id="ts-widget" class="ad-ts-widget"></div>
+      <div id="ts-hint" class="ad-ts-hint"></div>
+    </div>
+  </div>
+
+  <script src="/admin/index.js" defer></script>
 </body>
 </html>

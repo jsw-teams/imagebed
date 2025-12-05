@@ -5,34 +5,23 @@ import "github.com/gin-gonic/gin"
 // SecurityHeaders 统一设置一些安全相关的 HTTP 响应头。
 func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 基础安全头
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
-		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		// 现代浏览器基本已废弃 X-XSS-Protection，这里显式关闭旧行为
-		c.Header("X-XSS-Protection", "0")
-
-		// Content-Security-Policy
-		//
-		// 1. 默认只允许本站资源：default-src 'self'
-		// 2. 允许内联样式 / <style>：style-src 'self' 'unsafe-inline'
-		// 3. 允许内联脚本（当前页面脚本大多是内联）：script-src 'self' 'unsafe-inline' ...
-		// 4. 允许 Cloudflare Insights 脚本：static.cloudflareinsights.com
-		// 5. 允许 Cloudflare Turnstile：
-		//    - script-src: 加载 https://challenges.cloudflare.com/turnstile/v0/api.js
-		//    - frame-src: 允许 Turnstile 的 iframe
-		//    - connect-src: 允许验证请求
-		//    - img-src: 允许 Turnstile 相关图片
 		c.Header("Content-Security-Policy",
 			"default-src 'self'; "+
+				// 自己的脚本 + 内联脚本 + Cloudflare Insights + Turnstile
 				"script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://challenges.cloudflare.com; "+
+				// 自己的样式 + 内联样式
 				"style-src 'self' 'unsafe-inline'; "+
+				// 允许本站图片、data: 图片以及 Turnstile 相关图片
 				"img-src 'self' data: https://challenges.cloudflare.com; "+
-				"connect-src 'self' https://challenges.cloudflare.com; "+
-				"frame-src 'self' https://challenges.cloudflare.com; "+
+				// Turnstile 使用 iframe 加载
+				"frame-src https://challenges.cloudflare.com; "+
+				// AJAX / fetch 仅连回本站，另外放行 Turnstile/Insights 如后续需要可补充
+				"connect-src 'self'; "+
+				// 只允许本站作为 frame 容器
 				"frame-ancestors 'self';")
 
 		c.Next()
 	}
 }
-

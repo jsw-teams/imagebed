@@ -2,54 +2,60 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 图床 · 上传</title>
+  <title>Imagebed 图床 - 上传图片</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 轻量图床，支持常见图片格式一键上传，生成可公开访问的图片链接。" />
-  <link rel="canonical" href="/" />
+  <meta name="description" content="Imagebed 轻量图床服务，快速上传图片并获取直链。" />
   <link rel="stylesheet" href="/index.css" />
-  <script src="/index.js" defer></script>
 </head>
 <body>
-  <div class="shell">
-    <div class="header-row">
-      <div class="brand">
-        <div class="brand-logo">Ib</div>
+  <div class="ib-shell">
+    <header class="ib-header">
+      <div class="ib-brand">
+        <div class="ib-logo">Ib</div>
         <div>
-          <div class="brand-text-main">Imagebed 图床 · 上传</div>
-          <div class="brand-text-sub">选择图片，上传后获取外链地址。</div>
+          <div class="ib-brand-title">Imagebed 图床</div>
+          <div class="ib-brand-sub">上传图片，获取可公开访问的链接。</div>
         </div>
       </div>
-      <div class="header-right">
-        <a href="/admin" class="header-link">后台管理</a>
-      </div>
-    </div>
-
-    <div class="upload-card">
-      <div class="section-title">上传图片</div>
-      <div class="section-sub">支持 PNG / JPG / GIF / WebP 等常见图片格式。</div>
-
-      <div class="dropzone" id="dropzone">
-        <div class="dropzone-icon">↑</div>
-        <div class="dropzone-title">点击选择图片，或将图片拖拽到这里</div>
-        <div class="dropzone-sub">上传完成后将生成以当前域名开头的访问链接。</div>
-        <button class="btn-choose" id="btn-choose">选择图片</button>
-        <div class="file-name" id="file-name">尚未选择图片</div>
-      </div>
-
-      <button class="btn-upload" id="btn-upload">开始上传</button>
-
-      <div class="status-line" id="status-text"></div>
-
-      <div class="result-box" id="result-box" style="display: none;">
-        <div class="result-label">图片访问链接</div>
-        <div class="result-url-row">
-          <input id="result-url" class="result-input" readonly />
-          <button class="btn-copy" id="btn-copy">复制</button>
+      <nav class="ib-nav">
+        <a href="/admin" class="ib-nav-link">后台管理</a>
+      </nav>
+    </header>
+    <main class="ib-main">
+      <section class="ib-card">
+        <h1 class="ib-section-title">上传图片</h1>
+        <p class="ib-section-sub">支持 PNG / JPG / GIF / WebP 等常见格式。</p>
+        <div id="dropzone" class="ib-dropzone">
+          <div class="ib-drop-icon">↑</div>
+          <div class="ib-drop-title">点击选择图片，或拖拽到这里</div>
+          <div class="ib-drop-sub">上传后将生成以当前域名开头的访问链接。</div>
+          <button id="btn-choose" class="ib-btn ib-btn-secondary">选择图片</button>
+          <div id="file-name" class="ib-file-name">尚未选择图片</div>
         </div>
-      </div>
+        <button id="btn-upload" class="ib-btn ib-btn-primary ib-btn-full">开始上传</button>
+        <div id="status-text" class="ib-status"></div>
+        <div id="result-box" class="ib-result" style="display:none;">
+          <div class="ib-result-label">图片链接</div>
+          <div class="ib-result-row">
+            <input id="result-url" class="ib-result-input" readonly />
+            <button id="btn-copy" class="ib-btn ib-btn-ghost">复制</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Turnstile 弹窗 -->
+  <div id="ts-overlay" class="ib-ts-overlay" style="display:none;">
+    <div class="ib-ts-modal">
+      <button id="ts-close" class="ib-ts-close" aria-label="关闭验证">×</button>
+      <div class="ib-ts-title">请完成人机验证</div>
+      <div id="ts-widget" class="ib-ts-widget"></div>
+      <div id="ts-hint" class="ib-ts-hint"></div>
     </div>
   </div>
 
-  <input type="file" id="file-input" accept="image/*" />
+  <input type="file" id="file-input" accept="image/*" style="display:none;" />
+  <script src="/index.js" defer></script>
 </body>
 </html>

@@ -24,7 +24,7 @@ import (
 	webui "github.com/jsw-teams/imagebed/web"
 )
 
-// Server 封装整个 HTTP 服务及其依赖
+// Server 封装 HTTP 服务及其依赖
 type Server struct {
 	addr       string
 	configPath string
@@ -43,7 +43,7 @@ type Server struct {
 	imageHandler  *handlers.ImageHandler
 }
 
-// NewServer 使用给定的配置创建 HTTP 服务器。
+// NewServer 使用给定配置创建 HTTP 服务器。
 func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 	if cfg.HTTP.Addr == "" {
 		cfg.HTTP.Addr = ":9000"
@@ -55,7 +55,7 @@ func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 		cfg:        cfg,
 	}
 
-	// 如果已经安装过，则启动时初始化运行环境（DB / 迁移 / R2 / 审查 / Turnstile）
+	// 已安装情况下，启动时初始化运行环境（DB / 迁移 / R2 / 审查 / Turnstile）
 	if cfg.Installed {
 		if err := s.initRuntime(context.Background()); err != nil {
 			return nil, err
@@ -105,7 +105,7 @@ func (s *Server) initRuntime(ctx context.Context) error {
 
 	modService := moderation.NewService(cfg.Moderation, cfg.App.AllowedMimeTypes)
 
-	// Turnstile 配置由数据库提供
+	// Turnstile 配置从数据库读取；如果没配置则视为未启用
 	tsCfg, err := models.GetTurnstileSettings(ctx, db)
 	if err != nil {
 		db.Close()
@@ -143,7 +143,7 @@ func (s *Server) getDB() *pgxpool.Pool {
 	return s.db
 }
 
-// 通用：从 embed.FS 读取任意文件并返回
+// 从 embed.FS 读取任意文件并返回
 func serveEmbeddedFile(c *gin.Context, path, contentType string) {
 	data, err := webui.FS.ReadFile(path)
 	if err != nil {
@@ -164,13 +164,14 @@ func serveEmbeddedHTML(c *gin.Context, path string) {
 // buildEngine 构建 gin.Engine 和所有路由
 func (s *Server) buildEngine() {
 	gin.SetMode(gin.ReleaseMode)
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.SecurityHeaders())
 
-	// ---------- 前端路由 ----------
+	// ---------- 前端页面路由 ----------
 
-	// 根路径
+	// 根路径：未安装重定向到 /setup，已安装返回上传页
 	r.GET("/", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -179,7 +180,7 @@ func (s *Server) buildEngine() {
 		serveEmbeddedHTML(c, "index.html")
 	})
 
-	// /upload 兼容
+	// 上传页兼容路径 /upload
 	r.GET("/upload", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -191,7 +192,7 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/upload")
 	})
 
-	// 初始化安装页面：仅未安装时可访问；已安装后 404
+	// 初始化安装页面：只在未安装时可访问；已安装直接 404
 	r.GET("/setup", s.serveSetupPage)
 	r.GET("/setup/", s.serveSetupPage)
 
@@ -207,7 +208,7 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/admin")
 	})
 
-	// 管理后台 dashboard
+	// 管理后台仪表盘
 	r.GET("/admin/dashboard", func(c *gin.Context) {
 		if !s.IsInstalled() {
 			c.Redirect(http.StatusFound, "/setup")
@@ -219,9 +220,9 @@ func (s *Server) buildEngine() {
 		c.Redirect(http.StatusFound, "/admin/dashboard")
 	})
 
-	// --------- 静态资源：CSS / JS（从 embed.FS 提供） ---------
+	// ---------- 静态资源：CSS / JS（同样从 embed.FS 提供） ----------
 
-	// 根上传页
+	// 首页上传页
 	r.GET("/index.css", func(c *gin.Context) {
 		serveEmbeddedFile(c, "index.css", "text/css; charset=utf-8")
 	})
@@ -229,7 +230,7 @@ func (s *Server) buildEngine() {
 		serveEmbeddedFile(c, "index.js", "application/javascript; charset=utf-8")
 	})
 
-	// 登录页 /admin
+	// 管理后台登录页
 	r.GET("/admin/index.css", func(c *gin.Context) {
 		serveEmbeddedFile(c, "admin/index.css", "text/css; charset=utf-8")
 	})
@@ -237,7 +238,7 @@ func (s *Server) buildEngine() {
 		serveEmbeddedFile(c, "admin/index.js", "application/javascript; charset=utf-8")
 	})
 
-	// Dashboard 页 /admin/dashboard
+	// 管理后台 Dashboard
 	r.GET("/admin/dashboard.css", func(c *gin.Context) {
 		serveEmbeddedFile(c, "admin/dashboard.css", "text/css; charset=utf-8")
 	})
@@ -245,7 +246,7 @@ func (s *Server) buildEngine() {
 		serveEmbeddedFile(c, "admin/dashboard.js", "application/javascript; charset=utf-8")
 	})
 
-	// 安装向导 /setup
+	// 安装向导
 	r.GET("/setup/index.css", func(c *gin.Context) {
 		serveEmbeddedFile(c, "setup/index.css", "text/css; charset=utf-8")
 	})
@@ -256,7 +257,7 @@ func (s *Server) buildEngine() {
 	// 健康检查（不依赖安装状态）
 	r.GET("/healthz", handlers.HealthHandler())
 
-	// ---------- 安装 API（不要求已安装） ----------
+	// ---------- 安装 API（未安装时可用） ----------
 
 	r.POST("/api/setup/database", s.handleSetupDatabase)
 	r.POST("/api/setup/admin", s.handleSetupAdmin)
@@ -272,7 +273,7 @@ func (s *Server) buildEngine() {
 		s.bucketHandler = handlers.NewBucketHandler()
 		s.imageHandler = handlers.NewImageHandler(s.cfg.App.MaxUploadBytes)
 
-		// 如果启动时就已安装，则注入依赖
+		// 启动时如果已经安装，则注入依赖
 		if s.IsInstalled() {
 			s.mu.RLock()
 			db := s.db
@@ -285,21 +286,20 @@ func (s *Server) buildEngine() {
 			}
 		}
 
-		// Turnstile 中间件（上传 & 登录用）
+		// Turnstile 中间件（上传用）；只有在后台启用 + 配置完成后才真正生效
 		tsMiddleware := middleware.Turnstile(
 			func() *turnstile.Verifier { return s.GetVerifier() },
 			func() bool { return s.IsTurnstileEnabled() },
 		)
 
-		// 公共 Turnstile 配置（上传页 / 登录页用，不需要登录）
-		api.GET("/turnstile", s.handlePublicTurnstileConfig)
+		// ---------- Turnstile 公共查询接口（前端上传页 / 管理后台登录页使用） ----------
+		api.GET("/turnstile", s.handlePublicTurnstile)
 
 		// ---------- 管理员登录相关（不加 AdminAuthRequired） ----------
 		adminOpen := api.Group("/admin")
 		{
 			adminOpen.GET("/session", middleware.HandleAdminSessionStatus())
-			// 登录走 Turnstile 中间件，但仅在后台启用后才真正校验
-			adminOpen.POST("/login", tsMiddleware, middleware.HandleAdminLogin(s.getDB))
+			adminOpen.POST("/login", middleware.HandleAdminLogin(s.getDB))
 			adminOpen.POST("/logout", middleware.HandleAdminLogout())
 		}
 
@@ -314,13 +314,13 @@ func (s *Server) buildEngine() {
 			adminSec.PUT("/buckets/:id", s.bucketHandler.UpdateBucket)
 			adminSec.DELETE("/buckets/:id", s.bucketHandler.DeleteBucket)
 
-			// Turnstile 配置（后台管理）
+			// Turnstile 配置（仅后台使用）
 			adminSec.GET("/turnstile", s.handleAdminGetTurnstile)
 			adminSec.POST("/turnstile", s.handleAdminUpdateTurnstile)
 			adminSec.POST("/turnstile/test", s.handleAdminTestTurnstile)
 		}
 
-		// 旧接口：指定桶上传（第三方客户端用）
+		// 老接口：指定桶上传（第三方客户端）
 		api.POST("/buckets/:bucketID/upload", tsMiddleware, s.imageHandler.Upload)
 
 		// 新接口：自动挑桶上传（前端上传页使用）
@@ -392,8 +392,8 @@ func (s *Server) GetVerifier() *turnstile.Verifier {
 	return s.verifier
 }
 
-// IsTurnstileEnabled Turnstile 启用状态来自数据库配置 + 内存中的 verifier
-// 只有在后台配置完成并启用后，才会返回 true。
+// IsTurnstileEnabled Turnstile 启用状态来自数据库配置
+// 只有在：tsCfg 不为空、Enabled=true、SiteKey & SecretKey 均非空 且 verifier 已初始化 时返回 true
 func (s *Server) IsTurnstileEnabled() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -680,64 +680,57 @@ func (s *Server) handleAutoUpload(c *gin.Context) {
 }
 
 //
-// ---------- Turnstile 配置：公共查询 & 后台管理 ----------
+// ---------- Turnstile 配置相关 ----------
 //
 
+// 后台（带 has_secret）响应
 type turnstileConfigResponse struct {
 	Enabled   bool   `json:"enabled"`
 	SiteKey   string `json:"site_key"`
 	HasSecret bool   `json:"has_secret"`
 }
 
+// 后台更新请求
 type updateTurnstileRequest struct {
 	Enabled   bool   `json:"enabled"`
 	SiteKey   string `json:"site_key"`
 	SecretKey string `json:"secret_key"`
 }
 
+// 后台测试请求
 type testTurnstileRequest struct {
 	SecretKey string `json:"secret_key"`
 	TestToken string `json:"test_token"`
 }
 
-// handlePublicTurnstileConfig：公共读取 Turnstile 配置（上传页 / 登录页用，不需要登录）
-func (s *Server) handlePublicTurnstileConfig(c *gin.Context) {
+// 前端公开查询（不包含 secret）
+type publicTurnstileConfigResponse struct {
+	Enabled bool   `json:"enabled"`
+	SiteKey string `json:"site_key"`
+}
+
+// handlePublicTurnstile 提供给前端（上传页 / 后台登录页）查询是否启用 Turnstile + siteKey。
+// 未启用或未完整配置时，返回 enabled=false, site_key=""。
+func (s *Server) handlePublicTurnstile(c *gin.Context) {
 	s.mu.RLock()
-	cfg := s.cfg
-	db := s.db
-	tsCfg := s.tsCfg
-	verifier := s.verifier
+	ts := s.tsCfg
 	s.mu.RUnlock()
 
-	// 未安装或 DB 未就绪：统一视为未启用
-	if cfg == nil || !cfg.Installed || db == nil || tsCfg == nil {
-		c.JSON(http.StatusOK, turnstileConfigResponse{
-			Enabled:   false,
-			SiteKey:   "",
-			HasSecret: false,
+	if ts == nil || !ts.Enabled || ts.SiteKey == "" || ts.SecretKey == "" {
+		c.JSON(http.StatusOK, publicTurnstileConfigResponse{
+			Enabled: false,
+			SiteKey: "",
 		})
 		return
 	}
 
-	enabled := tsCfg.Enabled && tsCfg.SiteKey != "" && tsCfg.SecretKey != "" && verifier != nil
-
-	if !enabled {
-		c.JSON(http.StatusOK, turnstileConfigResponse{
-			Enabled:   false,
-			SiteKey:   "",
-			HasSecret: tsCfg.SecretKey != "",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, turnstileConfigResponse{
-		Enabled:   true,
-		SiteKey:   tsCfg.SiteKey,
-		HasSecret: tsCfg.SecretKey != "",
+	c.JSON(http.StatusOK, publicTurnstileConfigResponse{
+		Enabled: true,
+		SiteKey: ts.SiteKey,
 	})
 }
 
-// handleAdminGetTurnstile：后台读取 Turnstile 配置（需要管理员登录）
+// 后台获取 Turnstile 配置（需要管理员登录）
 func (s *Server) handleAdminGetTurnstile(c *gin.Context) {
 	s.mu.RLock()
 	cfg := s.cfg
@@ -788,6 +781,7 @@ func (s *Server) handleAdminGetTurnstile(c *gin.Context) {
 	})
 }
 
+// 后台更新 Turnstile 配置
 func (s *Server) handleAdminUpdateTurnstile(c *gin.Context) {
 	s.mu.RLock()
 	cfg := s.cfg
