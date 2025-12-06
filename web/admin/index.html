@@ -1,49 +1,43 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Imagebed 管理登录</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 图床管理后台登录页。" />
-  <link rel="stylesheet" href="/admin/index.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="index.css">
 </head>
-<body>
-  <div class="login-shell">
-    <div class="login-card">
-      <div class="login-brand">
-        <div class="login-logo">Ib</div>
-        <div>
-          <div class="login-title">Imagebed 管理登录</div>
-          <div class="login-sub">请输入管理员账号密码进入控制台。</div>
-        </div>
+<body class="admin-login-body">
+  <div class="page">
+    <header class="brand">
+      <div class="brand-logo">Ib</div>
+      <div>
+        <div class="brand-title">Imagebed 管理登录</div>
+        <div class="brand-subtitle">请使用管理员账号密码进入控制台。</div>
       </div>
-
-      <div class="login-error" id="login-error">
-        <span id="login-error-text"></span>
+    </header>
+    <section class="card">
+      <div class="card-header">
+        <h1>登录控制台</h1>
+        <p>登录成功后将跳转到 <code>/admin/dashboard</code>，未登录时前台上传页仍可正常访问。</p>
       </div>
-
-      <form id="login-form" class="login-form" autocomplete="off">
-        <div class="login-field">
-          <label class="login-label" for="login-username">用户名</label>
-          <input id="login-username" class="login-input" placeholder="admin" autocomplete="username" />
+      <form id="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="username">用户名</label>
+          <input id="username" name="username" autocomplete="username" placeholder="admin">
         </div>
-        <div class="login-field">
-          <label class="login-label" for="login-password">密码</label>
-          <input id="login-password" class="login-input" type="password" placeholder="••••••••" autocomplete="current-password" />
+        <div class="field">
+          <label class="field-label" for="password">密码</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••">
         </div>
-        <div class="login-actions">
-          <button id="login-submit" class="login-btn" type="submit">登录</button>
+        <div class="field ts-wrapper" id="turnstile-wrapper" hidden></div>
+        <div class="actions">
+          <button type="submit" class="btn-primary" id="login-submit">登录</button>
+          <span id="login-message" class="message"></span>
         </div>
       </form>
-
-      <p class="login-hint">登录成功后将跳转到 <code>/admin/dashboard</code>。</p>
-      <div class="login-meta">
-        <span>未登录时，前台上传页仍可正常访问。</span>
-        <span>如忘记密码，请在服务器上重置管理员账号。</span>
-      </div>
-    </div>
+      <div class="footer">登录成功后将跳转到后台。如忘记密码，请在服务器上重置管理员账号。</div>
+    </section>
   </div>
-
-  <script src="/admin/index.js"></script>
+  <script src="index.js"></script>
 </body>
 </html>
