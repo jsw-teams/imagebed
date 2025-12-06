@@ -32,7 +32,7 @@ type Server struct {
 	mu       sync.RWMutex
 	cfg      *config.Config
 	db       *pgxpool.Pool
-	r2       *storage.R2Client
+	r2Pool   *storage.R2Pool
 	mod      *moderation.Service
 	verifier *turnstile.Verifier
 	tsCfg    *models.TurnstileSettings
@@ -55,7 +55,7 @@ func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 		cfg:        cfg,
 	}
 
-	// 已安装情况下，启动时初始化运行环境（DB / 迁移 / R2 / 审查 / Turnstile）
+	// 已安装情况下，启动时初始化运行环境（DB / 迁移 / 审查 / Turnstile / R2Pool）
 	if cfg.Installed {
 		if err := s.initRuntime(context.Background()); err != nil {
 			return nil, err
@@ -70,7 +70,7 @@ func NewServer(configPath string, cfg *config.Config) (*Server, error) {
 	return s, nil
 }
 
-// initRuntime 根据当前 cfg 初始化 DB / 迁移 / R2 / 审查 / Turnstile
+// initRuntime 根据当前 cfg 初始化 DB / 迁移 / 审查 / Turnstile / R2Pool
 func (s *Server) initRuntime(ctx context.Context) error {
 	s.mu.RLock()
 	cfg := s.cfg
@@ -93,16 +93,7 @@ func (s *Server) initRuntime(ctx context.Context) error {
 		return fmt.Errorf("initRuntime: migrations failed: %w", err)
 	}
 
-	// R2 可选：未配置时置为 nil
-	var r2Client *storage.R2Client
-	if hasR2Config(&cfg.R2) {
-		r2Client, err = storage.NewR2Client(ctx, cfg.R2)
-		if err != nil {
-			db.Close()
-			return fmt.Errorf("initRuntime: r2 init failed: %w", err)
-		}
-	}
-
+	// 审查服务基于 config.Moderation
 	modService := moderation.NewService(cfg.Moderation, cfg.App.AllowedMimeTypes)
 
 	// Turnstile 配置从数据库读取；如果没配置则视为未启用
@@ -116,25 +107,21 @@ func (s *Server) initRuntime(ctx context.Context) error {
 		verifier = turnstile.NewVerifier(tsCfg.SecretKey)
 	}
 
+	// R2Pool：按桶配置动态创建 R2Client；这里初始化一个空池
+	r2Pool := storage.NewR2Pool()
+
 	s.mu.Lock()
 	if s.db != nil {
 		s.db.Close()
 	}
 	s.db = db
-	s.r2 = r2Client
+	s.r2Pool = r2Pool
 	s.mod = modService
 	s.tsCfg = tsCfg
 	s.verifier = verifier
 	s.mu.Unlock()
 
 	return nil
-}
-
-func hasR2Config(r2 *config.R2Config) bool {
-	if r2 == nil {
-		return false
-	}
-	return r2.AccountID != "" && r2.AccessKeyID != "" && r2.SecretAccessKey != ""
 }
 
 func (s *Server) getDB() *pgxpool.Pool {
@@ -277,12 +264,12 @@ func (s *Server) buildEngine() {
 		if s.IsInstalled() {
 			s.mu.RLock()
 			db := s.db
-			r2Client := s.r2
+			r2Pool := s.r2Pool
 			modService := s.mod
 			s.mu.RUnlock()
 			if db != nil {
-				s.bucketHandler.SetDeps(db, r2Client)
-				s.imageHandler.SetDeps(db, r2Client, modService)
+				s.bucketHandler.SetDeps(db, r2Pool)
+				s.imageHandler.SetDeps(db, r2Pool, modService)
 			}
 		}
 
@@ -307,7 +294,7 @@ func (s *Server) buildEngine() {
 		adminSec := api.Group("/admin")
 		adminSec.Use(middleware.AdminAuthRequired())
 		{
-			// R2 桶管理
+			// R2 桶管理（每桶独立账号 / endpoint）
 			adminSec.GET("/buckets", s.bucketHandler.ListBuckets)
 			adminSec.GET("/buckets/:id", s.bucketHandler.GetBucket)
 			adminSec.POST("/buckets", s.bucketHandler.CreateBucket)
@@ -487,6 +474,7 @@ func (s *Server) handleSetupDatabase(c *gin.Context) {
 	}
 	newCfg := *oldCfg
 	newCfg.Database.DSN = dsn
+	// 仅完成数据库配置，尚未创建管理员账号
 	newCfg.Installed = false
 
 	if err := config.Save(s.configPath, &newCfg); err != nil {
@@ -592,19 +580,7 @@ func (s *Server) handleSetupAdmin(c *gin.Context) {
 		return
 	}
 
-	// 安装完成后，初始化 R2 / Moderation / Turnstile
-	var r2Client *storage.R2Client
-	if hasR2Config(&newCfg.R2) {
-		r2Client, err = storage.NewR2Client(ctx, newCfg.R2)
-		if err != nil {
-			db.Close()
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":  "r2_init_failed",
-				"detail": err.Error(),
-			})
-			return
-		}
-	}
+	// 安装完成后，初始化 Moderation / Turnstile / R2Pool
 	modService := moderation.NewService(newCfg.Moderation, newCfg.App.AllowedMimeTypes)
 
 	tsCfg, err := models.GetTurnstileSettings(ctx, db)
@@ -621,23 +597,26 @@ func (s *Server) handleSetupAdmin(c *gin.Context) {
 		verifier = turnstile.NewVerifier(tsCfg.SecretKey)
 	}
 
+	r2Pool := storage.NewR2Pool()
+
 	s.mu.Lock()
 	if s.db != nil && s.db != db {
 		s.db.Close()
 	}
 	s.cfg = &newCfg
 	s.db = db
-	s.r2 = r2Client
+	s.r2Pool = r2Pool
 	s.mod = modService
 	s.tsCfg = tsCfg
 	s.verifier = verifier
 	s.mu.Unlock()
 
+	// 如果 handler 已经创建，则注入依赖
 	if s.bucketHandler != nil {
-		s.bucketHandler.SetDeps(db, r2Client)
+		s.bucketHandler.SetDeps(db, r2Pool)
 	}
 	if s.imageHandler != nil {
-		s.imageHandler.SetDeps(db, r2Client, modService)
+		s.imageHandler.SetDeps(db, r2Pool, modService)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

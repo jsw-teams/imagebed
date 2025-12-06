@@ -4,79 +4,94 @@
   <meta charset="UTF-8" />
   <title>Imagebed 安装向导</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 图床安装向导，配置数据库并创建管理员账号。" />
+  <meta name="description" content="Imagebed 图床服务首次安装向导，配置数据库与管理员账号。" />
   <link rel="stylesheet" href="/setup/index.css" />
 </head>
 <body>
-  <div class="shell">
-    <header class="header">
-      <div class="brand">
-        <div class="brand-logo">Ib</div>
-        <div class="brand-text">
-          <div class="brand-title">Imagebed 安装</div>
-          <div class="brand-sub">完成数据库与管理员配置后即可使用。</div>
+  <div class="setup-shell">
+    <div class="setup-card">
+      <div class="setup-brand">
+        <div class="setup-logo">Ib</div>
+        <div>
+          <div class="setup-title">Imagebed 安装向导</div>
+          <div class="setup-sub">两步完成数据库与管理员账号配置。</div>
         </div>
       </div>
-    </header>
 
-    <nav class="steps">
-      <div id="step-db" class="step step-active">
-        <div class="step-index">1</div>
-        <div class="step-text">数据库</div>
-      </div>
-      <div id="step-admin" class="step">
-        <div class="step-index">2</div>
-        <div class="step-text">管理员</div>
-      </div>
-    </nav>
-
-    <div id="setup-status" class="status"></div>
-
-    <main class="content">
-      <section id="panel-db" class="panel panel-active">
-        <div class="card">
-          <h2 class="card-title">配置数据库</h2>
-          <form id="db-form" class="form">
-            <div class="field">
-              <label for="db-name">数据库名称</label>
-              <input id="db-name" class="input" placeholder="例如：imagebed" />
-            </div>
-            <div class="field">
-              <label for="db-user">数据库用户</label>
-              <input id="db-user" class="input" placeholder="例如：imagebed" />
-            </div>
-            <div class="field">
-              <label for="db-pass">数据库密码</label>
-              <input id="db-pass" type="password" class="input" placeholder="填写该用户密码" />
-            </div>
-            <div class="button-row">
-              <button type="submit" id="btn-db-save" class="btn-primary">测试并保存</button>
-            </div>
-          </form>
+      <div class="setup-steps">
+        <div class="step-pill active" id="step-pill-db">
+          <div class="step-index">1</div>
+          <div class="step-text">
+            <div class="step-label">数据库设置</div>
+            <div class="step-desc">配置 PostgreSQL 连接信息</div>
+          </div>
         </div>
+        <div class="step-line"></div>
+        <div class="step-pill" id="step-pill-admin">
+          <div class="step-index">2</div>
+          <div class="step-text">
+            <div class="step-label">管理员账号</div>
+            <div class="step-desc">创建后台登录账户</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-error" id="setup-error">
+        <span id="setup-error-text"></span>
+      </div>
+
+      <!-- Step 1: 数据库 -->
+      <section id="step-db-panel" class="setup-panel active">
+        <form id="db-form" class="setup-form" autocomplete="off">
+          <div class="setup-field">
+            <label class="setup-label" for="db-name">数据库名称</label>
+            <input id="db-name" class="setup-input" placeholder="例如：imagebed" />
+            <div class="setup-help">默认连接 127.0.0.1:5432，sslmode=disable，请提前创建数据库。</div>
+          </div>
+          <div class="setup-field">
+            <label class="setup-label" for="db-user">数据库用户</label>
+            <input id="db-user" class="setup-input" placeholder="例如：imagebed" />
+          </div>
+          <div class="setup-field">
+            <label class="setup-label" for="db-password">数据库密码</label>
+            <input id="db-password" class="setup-input" type="password" placeholder="数据库用户密码" />
+          </div>
+          <div class="setup-actions">
+            <button id="db-submit" class="btn-primary" type="submit">保存并测试数据库</button>
+          </div>
+        </form>
+        <p class="setup-footnote">
+          完成本步骤后，服务会尝试连接数据库并自动创建所需表结构。
+        </p>
       </section>
 
-      <section id="panel-admin" class="panel">
-        <div class="card">
-          <h2 class="card-title">创建管理员</h2>
-          <form id="admin-form" class="form">
-            <div class="field">
-              <label for="admin-name">管理员用户名</label>
-              <input id="admin-name" class="input" placeholder="默认可用：admin" />
-            </div>
-            <div class="field">
-              <label for="admin-pass">管理员密码</label>
-              <input id="admin-pass" type="password" class="input" placeholder="设置一个安全密码" />
-            </div>
-            <div class="button-row">
-              <button type="button" id="btn-admin-back" class="btn-ghost">上一步</button>
-              <button type="submit" id="btn-admin-save" class="btn-primary">完成安装</button>
-            </div>
-          </form>
-        </div>
+      <!-- Step 2: 管理员 -->
+      <section id="step-admin-panel" class="setup-panel">
+        <form id="admin-form" class="setup-form" autocomplete="off">
+          <div class="setup-field">
+            <label class="setup-label" for="admin-username">管理员用户名</label>
+            <input id="admin-username" class="setup-input" placeholder="例如：admin" />
+          </div>
+          <div class="setup-field">
+            <label class="setup-label" for="admin-password">管理员密码</label>
+            <input id="admin-password" class="setup-input" type="password" placeholder="建议使用强密码" />
+            <div class="setup-help">请妥善保管，该账号用于登录 /admin 后台。</div>
+          </div>
+          <div class="setup-actions">
+            <button id="admin-submit" class="btn-primary" type="submit">创建管理员并完成安装</button>
+          </div>
+        </form>
+        <p class="setup-footnote">
+          安装完成后将自动跳转到 <code>/admin</code> 登录页面。
+        </p>
       </section>
-    </main>
+
+      <div class="setup-meta">
+        <span>如果已完成安装，可直接访问 <code>/admin</code> 或前台 <code>/</code> 上传页。</span>
+      </div>
+    </div>
   </div>
+
   <script src="/setup/index.js"></script>
 </body>
 </html>

@@ -8,176 +8,207 @@
   <link rel="stylesheet" href="/admin/dashboard.css" />
 </head>
 <body>
-  <div class="shell">
-    <header class="top-bar">
-      <div class="brand-row">
-        <div class="logo">Ib</div>
-        <div>
+  <div class="admin-shell">
+    <header class="admin-header">
+      <div class="brand">
+        <div class="brand-logo">Ib</div>
+        <div class="brand-text">
           <div class="brand-title">Imagebed 管理控制台</div>
-          <div class="brand-sub">管理存储桶与 Turnstile 设置。</div>
+          <div class="brand-sub">管理存储桶、配额与 Turnstile 设置。</div>
         </div>
       </div>
-      <div class="top-right">
-        <div class="pill user-pill" id="user-pill">
-          <div class="avatar-circle" id="avatar-circle">A</div>
-          <span id="user-name">Admin</span>
+      <div class="header-right">
+        <div class="health-pill">
+          <span class="dot" id="health-dot"></span>
+          <span id="health-text">检查中…</span>
         </div>
-        <button class="btn-ghost-small" id="btn-to-upload" type="button">打开上传页</button>
-        <button class="btn-ghost-small" id="btn-logout" type="button">退出登录</button>
+        <button class="btn-ghost" id="btn-to-upload">打开上传页</button>
+        <div class="user-pill">
+          <div class="avatar" id="avatar-circle">A</div>
+          <span id="user-name">Admin</span>
+          <button class="btn-link" id="btn-logout" type="button">退出</button>
+        </div>
       </div>
     </header>
 
-    <main class="main">
-      <aside class="side">
-        <div>
-          <div class="side-title">概览</div>
-          <div class="stat-card">
-            <div class="stat-name">运行状态</div>
-            <div class="stat-value" id="stat-health">未知</div>
-            <div class="stat-tag" id="stat-health-tag">正在检测 /healthz…</div>
-          </div>
-        </div>
-
-        <div>
-          <div class="side-title" style="margin-top:2px;">导航</div>
-          <div class="nav-list">
-            <div class="nav-item active" data-panel="buckets">
-              <span>存储桶管理</span>
-            </div>
-            <div class="nav-item" data-panel="turnstile">
-              <span>Turnstile 人机验证</span>
-            </div>
-          </div>
-        </div>
+    <main class="admin-main">
+      <aside class="admin-nav">
+        <button class="nav-item active" data-panel="overview">概览</button>
+        <button class="nav-item" data-panel="buckets">存储桶管理</button>
+        <button class="nav-item" data-panel="turnstile">Turnstile 验证</button>
       </aside>
 
-      <section class="content">
-        <div class="error-box" id="global-error">
-          <div class="error-dot"></div>
-          <div id="global-error-text"></div>
+      <section class="admin-content">
+        <div class="global-error" id="global-error">
+          <span id="global-error-text"></span>
+          <button id="global-error-close" type="button">×</button>
         </div>
 
-        <!-- 存储桶管理面板 -->
-        <div id="panel-buckets">
-          <div class="content-header">
+        <!-- 概览面板 -->
+        <section id="panel-overview" class="panel active">
+          <div class="panel-header">
             <div>
-              <div class="content-title">存储桶管理</div>
-              <div class="content-sub">新建 / 删除 R2 桶配置，并设置配额。</div>
+              <h1 class="panel-title">概览</h1>
+              <p class="panel-sub">查看服务健康状态与基础统计。</p>
             </div>
-            <span class="tag-soft" id="bucket-count-tag">桶：0</span>
           </div>
-
-          <div class="toolbar">
-            <button class="btn-primary" id="btn-new-bucket" type="button">新建存储桶</button>
-            <button class="btn-secondary" id="btn-refresh-bucket" type="button">刷新列表</button>
-          </div>
-
-          <div class="panel">
-            <span>最大配额以 <strong>GB</strong> 为单位填写，保存配置时会自动换算为字节写入后端。</span>
-            <span class="small-muted">显示名称与 R2 桶名可区分设置；配额留空表示不限制。</span>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>显示名称</th>
-                  <th>R2 桶名</th>
-                  <th>配额（后端以字节存储）</th>
-                  <th>已用</th>
-                  <th>状态</th>
-                  <th style="width:140px;">操作</th>
-                </tr>
-              </thead>
-              <tbody id="bucket-tbody">
-                <tr>
-                  <td colspan="6" style="text-align:center;color:#9ca3af;">正在加载…</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="section-divider"></div>
-          <div class="section-title-row">
-            <div>新建 / 编辑存储桶</div>
-            <span class="small-muted" id="bucket-form-mode">当前模式：新建</span>
-          </div>
-
-          <div class="form-grid" id="bucket-form">
-            <div class="field">
-              <label class="field-label" for="bf-name">显示名称</label>
-              <input id="bf-name" class="input" placeholder="例如：默认图床" />
+          <div class="cards-row">
+            <div class="card">
+              <div class="card-label">运行状态</div>
+              <div class="card-value" id="overview-health-value">未知</div>
+              <div class="card-desc" id="overview-health-desc">等待检测 /api/healthz…</div>
             </div>
-            <div class="field">
-              <label class="field-label" for="bf-r2">R2 桶名</label>
-              <input id="bf-r2" class="input" placeholder="例如：imgbed" />
+            <div class="card">
+              <div class="card-label">存储桶数量</div>
+              <div class="card-value" id="overview-bucket-count">-</div>
+              <div class="card-desc">统计所有已配置的可用存储桶。</div>
             </div>
-            <div class="field">
-              <label class="field-label" for="bf-max">最大配额（GB）</label>
-              <input id="bf-max" class="input" inputmode="decimal" placeholder="例如：10（表示 10 GB，留空为不限制）" />
+          </div>
+        </section>
+
+        <!-- 存储桶管理 -->
+        <section id="panel-buckets" class="panel">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">存储桶管理</h1>
+              <p class="panel-sub">为不同业务配置独立的 R2 账号 / Endpoint 与配额。</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn-secondary" id="btn-refresh-bucket" type="button">刷新</button>
+              <button class="btn-primary" id="btn-new-bucket" type="button">新建存储桶</button>
             </div>
           </div>
 
-          <div class="toolbar" style="margin-top:2px;">
-            <button class="btn-primary" id="btn-save-bucket" type="button">保存配置</button>
-            <button class="btn-secondary" id="btn-reset-bucket" type="button">重置表单</button>
+          <div class="table-card">
+            <div class="table-toolbar">
+              <span class="tag-soft" id="bucket-count-tag">桶：0</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>显示名称</th>
+                    <th>R2 桶名</th>
+                    <th>Endpoint</th>
+                    <th>最大配额 (GiB)</th>
+                    <th>已用</th>
+                    <th>状态</th>
+                    <th style="width:160px;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="bucket-tbody">
+                  <tr><td colspan="7" class="table-empty">正在加载…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          <div class="form-card hidden" id="bucket-form-wrapper">
+            <div class="form-header">
+              <div>
+                <div class="form-title" id="bucket-form-title">新建存储桶</div>
+                <div class="form-sub" id="bucket-form-sub">填写 R2 访问参数与配额。</div>
+              </div>
+              <button class="btn-ghost" id="btn-close-bucket-form" type="button">收起</button>
+            </div>
+
+            <div class="form-grid">
+              <label class="field">
+                <span class="field-label">显示名称</span>
+                <input id="bf-name" class="input" placeholder="例如：默认图床" />
+              </label>
+              <label class="field">
+                <span class="field-label">R2 桶名 (Bucket)</span>
+                <input id="bf-r2" class="input" placeholder="例如：imgbed" />
+              </label>
+              <label class="field">
+                <span class="field-label">Endpoint (S3 API 地址)</span>
+                <input id="bf-endpoint" class="input" placeholder="例如：https://xxx.r2.cloudflarestorage.com" />
+              </label>
+              <label class="field">
+                <span class="field-label">Account ID</span>
+                <input id="bf-account" class="input" placeholder="Cloudflare 帐号 ID" />
+              </label>
+              <label class="field">
+                <span class="field-label">Access Key ID</span>
+                <input id="bf-access" class="input" placeholder="R2 Access Key ID" />
+              </label>
+              <label class="field">
+                <span class="field-label">Secret Access Key</span>
+                <input id="bf-secret" class="input" placeholder="R2 Secret Access Key" />
+              </label>
+              <label class="field">
+                <span class="field-label">区域 (Region)</span>
+                <input id="bf-region" class="input" placeholder="例如：auto / eu" />
+              </label>
+              <label class="field">
+                <span class="field-label">最大配额 (GiB)</span>
+                <input id="bf-max" class="input" placeholder="例如：10" />
+              </label>
+              <label class="field field-inline">
+                <span class="field-label">启用状态</span>
+                <label class="toggle">
+                  <input type="checkbox" id="bf-active" checked />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text" id="bf-active-text">已启用</span>
+                </label>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" id="btn-save-bucket" type="button">保存配置</button>
+              <button class="btn-secondary" id="btn-reset-bucket" type="button">重置表单</button>
+            </div>
+          </div>
+        </section>
 
         <!-- Turnstile 面板 -->
-        <div id="panel-turnstile" style="display:none;">
-          <div class="content-header">
+        <section id="panel-turnstile" class="panel">
+          <div class="panel-header">
             <div>
-              <div class="content-title">Turnstile 人机验证</div>
-              <div class="content-sub">
-                配置 Turnstile Site Key / Secret Key，启用后上传接口会校验 token。
+              <h1 class="panel-title">Turnstile 人机验证</h1>
+              <p class="panel-sub">在上传接口前增加 Cloudflare Turnstile 校验，防止滥用与刷流量。</p>
+            </div>
+            <span id="ts-status-tag" class="pill-status pill-off">状态：未启用</span>
+          </div>
+
+          <div class="form-card">
+            <div class="form-header no-border">
+              <div>
+                <div class="form-title">基础配置</div>
+                <div class="form-sub">在 Turnstile 控制台创建站点后，将 Site Key / Secret Key 填入。</div>
               </div>
             </div>
-            <span id="ts-status-tag" class="pill-small-bad">状态：未启用</span>
-          </div>
 
-          <div class="panel">
-            <span>启用前请在 Cloudflare Turnstile 控制台创建站点并复制 Key。</span>
-          </div>
+            <div class="form-grid">
+              <label class="field field-inline">
+                <span class="field-label">启用 Turnstile</span>
+                <label class="toggle">
+                  <input type="checkbox" id="ts-enabled" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text" id="ts-toggle-text">当前：关闭</span>
+                </label>
+              </label>
+              <label class="field">
+                <span class="field-label">Site Key</span>
+                <input id="ts-site" class="input" placeholder="从 Turnstile 控制台复制" />
+              </label>
+              <label class="field">
+                <span class="field-label">Secret Key</span>
+                <input id="ts-secret" class="input" placeholder="仅存储于后端，不会在前端回显" />
+              </label>
+              <label class="field">
+                <span class="field-label">测试 Token（可选）</span>
+                <input id="ts-token" class="input" placeholder="如需在线测试，可从前端页面获取" />
+              </label>
+            </div>
 
-          <div class="section-divider"></div>
-
-          <div class="section-title-row">
-            <div>1. 启用开关</div>
-            <div class="toggle-row">
-              <div id="ts-toggle" class="toggle">
-                <div class="toggle-knob"></div>
-              </div>
-              <span class="small-muted" id="ts-toggle-text">当前：关闭</span>
+            <div class="form-actions">
+              <button class="btn-primary" id="btn-save-ts" type="button">测试并保存配置</button>
+              <button class="btn-secondary" id="btn-refresh-ts" type="button">重新读取配置</button>
             </div>
           </div>
-
-          <div class="section-divider"></div>
-
-          <div class="section-title-row">
-            <div>2. 填写 Key 信息</div>
-          </div>
-
-          <div class="form-grid">
-            <div class="field">
-              <label class="field-label" for="ts-site">Site Key</label>
-              <input id="ts-site" class="input" placeholder="从 Turnstile 控制台复制" />
-            </div>
-            <div class="field">
-              <label class="field-label" for="ts-secret">Secret Key</label>
-              <input id="ts-secret" class="input" placeholder="用于后端验证 token" />
-            </div>
-            <div class="field">
-              <label class="field-label" for="ts-token">测试 Token（启用前可选填）</label>
-              <input id="ts-token" class="input" placeholder="从测试页面获得" />
-            </div>
-          </div>
-
-          <div class="toolbar" style="margin-top:2px;">
-            <button class="btn-primary" id="btn-save-ts" type="button">保存配置</button>
-            <button class="btn-secondary" id="btn-refresh-ts" type="button">重新读取配置</button>
-          </div>
-        </div>
+        </section>
       </section>
     </main>
   </div>

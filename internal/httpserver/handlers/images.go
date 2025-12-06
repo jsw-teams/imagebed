@@ -22,7 +22,7 @@ import (
 type ImageHandler struct {
 	mu             sync.RWMutex
 	db             *pgxpool.Pool
-	r2             *storage.R2Client
+	r2Pool         *storage.R2Pool
 	moderation     *moderation.Service
 	maxUploadBytes int64
 }
@@ -33,23 +33,25 @@ func NewImageHandler(maxUploadBytes int64) *ImageHandler {
 	}
 }
 
-func (h *ImageHandler) SetDeps(db *pgxpool.Pool, r2 *storage.R2Client, mod *moderation.Service) {
+// SetDeps 注入依赖：数据库连接池 + R2 客户端池 + 审核服务。
+func (h *ImageHandler) SetDeps(db *pgxpool.Pool, r2Pool *storage.R2Pool, mod *moderation.Service) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.db = db
-	h.r2 = r2
+	h.r2Pool = r2Pool
 	h.moderation = mod
 }
 
-func (h *ImageHandler) deps() (*pgxpool.Pool, *storage.R2Client, *moderation.Service) {
+func (h *ImageHandler) deps() (*pgxpool.Pool, *storage.R2Pool, *moderation.Service) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.db, h.r2, h.moderation
+	return h.db, h.r2Pool, h.moderation
 }
 
+// Upload 处理图片上传：严格限制文件类型、大小，并根据桶配额进行校验。
 func (h *ImageHandler) Upload(c *gin.Context) {
-	db, r2, modService := h.deps()
-	if db == nil || r2 == nil {
+	db, r2Pool, modService := h.deps()
+	if db == nil || r2Pool == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"error":     "service_not_ready",
 			"setup_url": "/setup/",
@@ -115,7 +117,9 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 
 	size := int64(len(data))
-	if bucket.CurrentBytes+size > bucket.MaxBytes {
+
+	// 配额：max_bytes == 0 表示不限，否则要求 current + size <= max_bytes。
+	if bucket.MaxBytes > 0 && bucket.CurrentBytes+size > bucket.MaxBytes {
 		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "bucket quota exceeded"})
 		return
 	}
@@ -126,7 +130,17 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	}
 	objectKey := uuid.New().String() + ext
 
-	if err := r2.PutObject(ctx, bucket.R2Bucket, objectKey, contentType, bytes.NewReader(data), size); err != nil {
+	// 每个桶使用独立 R2 账号/endpoint。
+	r2Client, err := r2Pool.GetClientForBucket(ctx, bucket)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error":  "r2_connect_failed",
+			"detail": err.Error(),
+		})
+		return
+	}
+
+	if err := r2Client.PutObject(ctx, bucket.R2Bucket, objectKey, contentType, bytes.NewReader(data), size); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to upload to R2"})
 		return
 	}
@@ -155,7 +169,8 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	url := r2.PublicURL(bucket.R2Bucket, objectKey)
+	// 直链仅用于调试/管理，外部实际访问统一走 /i/{id}
+	url := r2Client.PublicURL(bucket.R2Bucket, objectKey)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":           img.ID,
@@ -165,9 +180,10 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	})
 }
 
+// GetImageMeta 查询图片元信息。
 func (h *ImageHandler) GetImageMeta(c *gin.Context) {
-	db, r2, _ := h.deps()
-	if db == nil || r2 == nil {
+	db, r2Pool, _ := h.deps()
+	if db == nil || r2Pool == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"error":     "service_not_ready",
 			"setup_url": "/setup/",
@@ -195,7 +211,16 @@ func (h *ImageHandler) GetImageMeta(c *gin.Context) {
 		return
 	}
 
-	url := r2.PublicURL(bucket.R2Bucket, img.ObjectKey)
+	r2Client, err := r2Pool.GetClientForBucket(ctx, bucket)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error":  "r2_connect_failed",
+			"detail": err.Error(),
+		})
+		return
+	}
+
+	url := r2Client.PublicURL(bucket.R2Bucket, img.ObjectKey)
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":           img.ID,
@@ -207,10 +232,10 @@ func (h *ImageHandler) GetImageMeta(c *gin.Context) {
 	})
 }
 
-// 通过内部 ID 302 重定向到 R2 直链
+// ServeImage 通过内部 ID 302 重定向到 R2 直链。
 func (h *ImageHandler) ServeImage(c *gin.Context) {
-	db, r2, _ := h.deps()
-	if db == nil || r2 == nil {
+	db, r2Pool, _ := h.deps()
+	if db == nil || r2Pool == nil {
 		c.Redirect(http.StatusFound, "/setup/")
 		return
 	}
@@ -234,7 +259,16 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
-	url := r2.PublicURL(bucket.R2Bucket, img.ObjectKey)
+	r2Client, err := r2Pool.GetClientForBucket(ctx, bucket)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error":  "r2_connect_failed",
+			"detail": err.Error(),
+		})
+		return
+	}
+
+	url := r2Client.PublicURL(bucket.R2Bucket, img.ObjectKey)
 	c.Redirect(http.StatusFound, url)
 }
 

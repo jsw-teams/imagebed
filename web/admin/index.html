@@ -2,48 +2,48 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 管理后台登录</title>
+  <title>Imagebed 管理登录</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="description" content="登录 Imagebed 管理后台。" />
+  <meta name="description" content="Imagebed 图床管理后台登录页。" />
   <link rel="stylesheet" href="/admin/index.css" />
 </head>
 <body>
-  <div class="ad-shell">
-    <div class="ad-card">
-      <header class="ad-header">
-        <div class="ad-brand">
-          <div class="ad-logo">Ib</div>
-          <div>
-            <div class="ad-title">Imagebed 管理后台</div>
-            <div class="ad-sub">登录以管理桶与上传策略。</div>
-          </div>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo">Ib</div>
+        <div>
+          <div class="login-title">Imagebed 管理登录</div>
+          <div class="login-sub">请输入管理员账号密码进入控制台。</div>
         </div>
-      </header>
-      <main class="ad-main">
-        <div class="ad-field">
-          <label for="username">用户名</label>
-          <input id="username" class="ad-input" autocomplete="username" />
+      </div>
+
+      <div class="login-error" id="login-error">
+        <span id="login-error-text"></span>
+      </div>
+
+      <form id="login-form" class="login-form" autocomplete="off">
+        <div class="login-field">
+          <label class="login-label" for="login-username">用户名</label>
+          <input id="login-username" class="login-input" placeholder="admin" autocomplete="username" />
         </div>
-        <div class="ad-field">
-          <label for="password">密码</label>
-          <input id="password" class="ad-input" type="password" autocomplete="current-password" />
+        <div class="login-field">
+          <label class="login-label" for="login-password">密码</label>
+          <input id="login-password" class="login-input" type="password" placeholder="••••••••" autocomplete="current-password" />
         </div>
-        <button id="btn-login" class="ad-btn ad-btn-primary">登录</button>
-        <div id="status" class="ad-status"></div>
-      </main>
+        <div class="login-actions">
+          <button id="login-submit" class="login-btn" type="submit">登录</button>
+        </div>
+      </form>
+
+      <p class="login-hint">登录成功后将跳转到 <code>/admin/dashboard</code>。</p>
+      <div class="login-meta">
+        <span>未登录时，前台上传页仍可正常访问。</span>
+        <span>如忘记密码，请在服务器上重置管理员账号。</span>
+      </div>
     </div>
   </div>
 
-  <div id="ts-overlay" class="ad-ts-overlay" style="display:none;">
-    <div class="ad-ts-modal">
-      <button id="ts-close" class="ad-ts-close" aria-label="关闭验证">×</button>
-      <div class="ad-ts-title">请完成人机验证</div>
-      <div id="ts-widget" class="ad-ts-widget"></div>
-      <div id="ts-hint" class="ad-ts-hint"></div>
-    </div>
-  </div>
-
-  <script src="/admin/index.js" defer></script>
+  <script src="/admin/index.js"></script>
 </body>
 </html>

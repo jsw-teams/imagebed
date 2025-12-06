@@ -2,60 +2,76 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 图床 - 上传图片</title>
+  <title>Imagebed 图床上传</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 轻量图床服务，快速上传图片并获取直链。" />
+  <meta name="description" content="轻量级图床服务，支持 Cloudflare R2，多桶与 Turnstile 防滥用。">
   <link rel="stylesheet" href="/index.css" />
 </head>
 <body>
-  <div class="ib-shell">
-    <header class="ib-header">
-      <div class="ib-brand">
-        <div class="ib-logo">Ib</div>
-        <div>
-          <div class="ib-brand-title">Imagebed 图床</div>
-          <div class="ib-brand-sub">上传图片，获取可公开访问的链接。</div>
+  <div class="upload-shell">
+    <header class="upload-header">
+      <div class="brand">
+        <div class="brand-logo">Ib</div>
+        <div class="brand-text">
+          <div class="brand-title">Imagebed 图床</div>
+          <div class="brand-sub">图片托管 · R2 存储 · 轻量安全</div>
         </div>
       </div>
-      <nav class="ib-nav">
-        <a href="/admin" class="ib-nav-link">后台管理</a>
-      </nav>
+      <div class="header-actions">
+        <a class="header-link" href="/admin">管理后台</a>
+      </div>
     </header>
-    <main class="ib-main">
-      <section class="ib-card">
-        <h1 class="ib-section-title">上传图片</h1>
-        <p class="ib-section-sub">支持 PNG / JPG / GIF / WebP 等常见格式。</p>
-        <div id="dropzone" class="ib-dropzone">
-          <div class="ib-drop-icon">↑</div>
-          <div class="ib-drop-title">点击选择图片，或拖拽到这里</div>
-          <div class="ib-drop-sub">上传后将生成以当前域名开头的访问链接。</div>
-          <button id="btn-choose" class="ib-btn ib-btn-secondary">选择图片</button>
-          <div id="file-name" class="ib-file-name">尚未选择图片</div>
+
+    <main class="upload-main">
+      <section class="upload-card">
+        <div class="upload-head">
+          <h1 class="upload-title">上传图片</h1>
+          <p class="upload-sub">支持常见图片格式，服务器将自动分配存储桶并返回链接。</p>
         </div>
-        <button id="btn-upload" class="ib-btn ib-btn-primary ib-btn-full">开始上传</button>
-        <div id="status-text" class="ib-status"></div>
-        <div id="result-box" class="ib-result" style="display:none;">
-          <div class="ib-result-label">图片链接</div>
-          <div class="ib-result-row">
-            <input id="result-url" class="ib-result-input" readonly />
-            <button id="btn-copy" class="ib-btn ib-btn-ghost">复制</button>
+
+        <div class="upload-msg" id="upload-msg"></div>
+
+        <form id="upload-form" class="upload-form" enctype="multipart/form-data">
+          <div id="drop-zone" class="drop-zone">
+            <div class="drop-inner">
+              <div class="drop-icon">⬆</div>
+              <div class="drop-title">拖拽图片到此处，或点击选择文件</div>
+              <div class="drop-sub">仅用于图片托管，请勿上传违规内容。</div>
+              <label class="file-trigger" for="upload-file">选择图片文件</label>
+              <input id="upload-file" name="file" type="file" accept="image/*" class="file-input" />
+              <div class="file-info" id="file-info">尚未选择文件</div>
+            </div>
           </div>
-        </div>
+
+          <div id="turnstile-container" class="turnstile-wrap hidden">
+            <div class="turnstile-label">人机验证</div>
+            <!-- JS 会在此插入 Turnstile 小组件 -->
+          </div>
+
+          <div class="upload-actions">
+            <button id="upload-submit" type="submit" class="btn-primary">上传</button>
+          </div>
+        </form>
+
+        <section id="upload-result" class="result-card">
+          <div class="result-title">上传结果</div>
+          <div class="result-row">
+            <input id="result-url" class="result-input" readonly />
+            <button id="copy-url" type="button" class="btn-secondary">复制链接</button>
+          </div>
+          <div class="result-extra">
+            <div>Markdown：<code id="result-md"></code></div>
+            <div>HTML：<code id="result-html"></code></div>
+          </div>
+        </section>
+
+        <p class="upload-footnote">
+          默认限制约 10 MiB，可在配置文件中调整。具体以服务器配置为准。
+        </p>
       </section>
     </main>
   </div>
 
-  <!-- Turnstile 弹窗 -->
-  <div id="ts-overlay" class="ib-ts-overlay" style="display:none;">
-    <div class="ib-ts-modal">
-      <button id="ts-close" class="ib-ts-close" aria-label="关闭验证">×</button>
-      <div class="ib-ts-title">请完成人机验证</div>
-      <div id="ts-widget" class="ib-ts-widget"></div>
-      <div id="ts-hint" class="ib-ts-hint"></div>
-    </div>
-  </div>
-
-  <input type="file" id="file-input" accept="image/*" style="display:none;" />
-  <script src="/index.js" defer></script>
+  <script src="/index.js"></script>
 </body>
 </html>

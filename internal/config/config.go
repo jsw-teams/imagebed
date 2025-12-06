@@ -18,7 +18,17 @@ type DatabaseConfig struct {
 	DSN string `json:"dsn"` // 例如 postgres://user:pass@localhost:5432/imagebed?sslmode=disable
 }
 
-// R2Config Cloudflare R2 配置。
+// R2Config Cloudflare R2 全局默认配置（可选）。
+//
+// ⚠️ 注意：在当前版本中，实际用于上传的 R2 配置已经迁移到数据库 buckets
+// 表中，按「每个桶独立账号 / endpoint」进行管理。
+// 这里的 R2Config 仅保留为：
+//
+//   1. 兼容旧版 config.json 结构；
+//   2. 作为你手工新建桶时的“默认模板来源”（如果以后需要，可以在后台表单中添加
+//      “从全局配置导入”按钮）。
+//
+// 运行时的核心逻辑（handlers/images.go 等）不再直接依赖 Config.R2。
 type R2Config struct {
 	AccountID       string `json:"account_id"`
 	AccessKeyID     string `json:"access_key_id"`
@@ -28,8 +38,10 @@ type R2Config struct {
 }
 
 // TurnstileConfig Turnstile 基础配置。
-// site_key / secret_key 的最终生效配置已经迁移到数据库中，
-// 这里只保留一个开关和可选的后端 secret 以兼容旧结构。
+//
+// site_key / secret_key 的最终生效配置已经迁移到数据库表 turnstile_settings 中，
+// router / handlers 会优先以数据库为准。
+// 这里保留一个开关和可选的后端 secret，仅用于兼容旧结构或你将来扩展。
 type TurnstileConfig struct {
 	Enabled   bool   `json:"enabled"`
 	SecretKey string `json:"secret_key"`
@@ -44,18 +56,21 @@ type ModerationConfig struct {
 
 // AppConfig 应用层配置。
 type AppConfig struct {
-	MaxUploadBytes   int64    `json:"max_upload_bytes"`
+	// 单文件最大上传大小（字节）
+	MaxUploadBytes int64 `json:"max_upload_bytes"`
+	// 允许上传的 MIME 类型白名单
 	AllowedMimeTypes []string `json:"allowed_mime_types"`
 }
 
 // Config 总配置。
+//
 // 注意：Installed 用于标记系统是否已经完成初始化安装，
 // router.go 会用它来决定是否强制跳转 /setup。
 type Config struct {
 	HTTP       HTTPConfig       `json:"http"`
 	Database   DatabaseConfig   `json:"database"`
-	R2         R2Config         `json:"r2"`
-	Turnstile  TurnstileConfig  `json:"turnstile"`
+	R2         R2Config         `json:"r2"`        // 全局默认 / 兼容字段，实际 R2 配置以 buckets 表为准
+	Turnstile  TurnstileConfig  `json:"turnstile"` // 最终生效配置在 turnstile_settings 表
 	Moderation ModerationConfig `json:"moderation"`
 	App        AppConfig        `json:"app"`
 
@@ -109,6 +124,7 @@ func (c *Config) applyDefaults() {
 	if c.HTTP.Addr == "" {
 		c.HTTP.Addr = ":9000"
 	}
+	// R2.Region 只作为“全局默认模板”存在，不影响每桶配置
 	if c.R2.Region == "" {
 		c.R2.Region = "auto"
 	}
@@ -126,9 +142,10 @@ func (c *Config) applyDefaults() {
 }
 
 // Load 从指定路径读取配置；
-// - 如果文件不存在，会自动用 Default() 生成一份 config.json 写入磁盘并返回默认配置；
-// - 如果文件存在但内容为空，也会写入默认配置；
-// - 如果 JSON 结构不合法，返回错误。
+//
+//   - 如果文件不存在，会自动用 Default() 生成一份 config.json 写入磁盘并返回默认配置；
+//   - 如果文件存在但内容为空，也会写入默认配置；
+//   - 如果 JSON 结构不合法，返回错误。
 func Load(path string) (*Config, error) {
 	// 没有指定路径时，直接返回默认配置（一般不会出现，因为 main 会传 -config）
 	if path == "" {
@@ -163,7 +180,8 @@ func Load(path string) (*Config, error) {
 		return cfg, nil
 	}
 
-	cfg := Default() // 先带默认值，再覆盖
+	// 先带默认值，再覆盖，避免新字段缺失时出现零值问题
+	cfg := Default()
 	if err := json.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("decode config: %w", err)
 	}
