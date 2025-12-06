@@ -2,217 +2,223 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Imagebed 管理控制台</title>
+  <title>Imagebed 管理控制台 · 存储桶与 R2 配置</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Imagebed 图床管理控制台，用于管理 R2 存储桶与 Turnstile 配置。" />
   <link rel="stylesheet" href="/admin/dashboard.css" />
 </head>
 <body>
-  <div class="admin-shell">
-    <header class="admin-header">
-      <div class="brand">
-        <div class="brand-logo">Ib</div>
-        <div class="brand-text">
-          <div class="brand-title">Imagebed 管理控制台</div>
-          <div class="brand-sub">管理存储桶、配额与 Turnstile 设置。</div>
-        </div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div>
+        <div class="sidebar-title">Imagebed 控制台</div>
+        <div class="subtext">多账号 R2 图床 · 管理面板</div>
       </div>
-      <div class="header-right">
-        <div class="health-pill">
-          <span class="dot" id="health-dot"></span>
-          <span id="health-text">检查中…</span>
-        </div>
-        <button class="btn-ghost" id="btn-to-upload">打开上传页</button>
-        <div class="user-pill">
-          <div class="avatar" id="avatar-circle">A</div>
-          <span id="user-name">Admin</span>
-          <button class="btn-link" id="btn-logout" type="button">退出</button>
-        </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item nav-item-active" data-view="buckets">
+        <span class="label">存储桶管理</span>
+        <span class="nav-chip">R2 多账号</span>
+      </button>
+      <button class="nav-item" data-view="turnstile">
+        <span class="label">Turnstile 验证</span>
+        <span class="nav-chip">防滥用</span>
+      </button>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>管理控制台</h1>
+        <p>按桶配置 R2 凭证与配额，前端仅通过本域名的 <code>/i/{id}</code> 访问图片。</p>
+      </div>
+      <div class="topbar-right">
+        <span class="tag tag-soft">v0.2.0 · 多桶 / 多账号 R2</span>
+        <button class="btn btn-ghost" id="btn-logout">退出登录</button>
       </div>
     </header>
-
-    <main class="admin-main">
-      <aside class="admin-nav">
-        <button class="nav-item active" data-panel="overview">概览</button>
-        <button class="nav-item" data-panel="buckets">存储桶管理</button>
-        <button class="nav-item" data-panel="turnstile">Turnstile 验证</button>
-      </aside>
-
-      <section class="admin-content">
-        <div class="global-error" id="global-error">
-          <span id="global-error-text"></span>
-          <button id="global-error-close" type="button">×</button>
+    <div class="content">
+      <!-- 存储桶视图 -->
+      <section class="card" data-view-id="buckets">
+        <div class="card-header">
+          <div>
+            <h2>存储桶管理</h2>
+            <p>这里只管理逻辑桶与 R2 S3 API 配置，不直接暴露任何公网访问前缀。</p>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-soft"><span class="badge-dot"></span> R2 配置表单仅能从此页按钮进入</span>
+          </div>
         </div>
-
-        <!-- 概览面板 -->
-        <section id="panel-overview" class="panel active">
-          <div class="panel-header">
-            <div>
-              <h1 class="panel-title">概览</h1>
-              <p class="panel-sub">查看服务健康状态与基础统计。</p>
-            </div>
+        <div class="card-header" style="margin-top:6px;">
+          <div class="chip-pill">
+            <span class="chip-dot"></span>
+            <span>每个桶拥有独立的 Account ID / AccessKey / Secret / 区域 / Endpoint，支持多账号多区域。</span>
           </div>
-          <div class="cards-row">
-            <div class="card">
-              <div class="card-label">运行状态</div>
-              <div class="card-value" id="overview-health-value">未知</div>
-              <div class="card-desc" id="overview-health-desc">等待检测 /api/healthz…</div>
-            </div>
-            <div class="card">
-              <div class="card-label">存储桶数量</div>
-              <div class="card-value" id="overview-bucket-count">-</div>
-              <div class="card-desc">统计所有已配置的可用存储桶。</div>
-            </div>
+          <div>
+            <button class="btn btn-ghost" id="btn-reload-buckets">刷新</button>
+            <button class="btn btn-primary" id="btn-new-bucket">新建存储桶</button>
           </div>
-        </section>
-
-        <!-- 存储桶管理 -->
-        <section id="panel-buckets" class="panel">
-          <div class="panel-header">
-            <div>
-              <h1 class="panel-title">存储桶管理</h1>
-              <p class="panel-sub">为不同业务配置独立的 R2 账号 / Endpoint 与配额。</p>
-            </div>
-            <div class="panel-actions">
-              <button class="btn-secondary" id="btn-refresh-bucket" type="button">刷新</button>
-              <button class="btn-primary" id="btn-new-bucket" type="button">新建存储桶</button>
-            </div>
-          </div>
-
-          <div class="table-card">
-            <div class="table-toolbar">
-              <span class="tag-soft" id="bucket-count-tag">桶：0</span>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>显示名称</th>
-                    <th>R2 桶名</th>
-                    <th>Endpoint</th>
-                    <th>最大配额 (GiB)</th>
-                    <th>已用</th>
-                    <th>状态</th>
-                    <th style="width:160px;">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="bucket-tbody">
-                  <tr><td colspan="7" class="table-empty">正在加载…</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="form-card hidden" id="bucket-form-wrapper">
-            <div class="form-header">
-              <div>
-                <div class="form-title" id="bucket-form-title">新建存储桶</div>
-                <div class="form-sub" id="bucket-form-sub">填写 R2 访问参数与配额。</div>
-              </div>
-              <button class="btn-ghost" id="btn-close-bucket-form" type="button">收起</button>
-            </div>
-
-            <div class="form-grid">
-              <label class="field">
-                <span class="field-label">显示名称</span>
-                <input id="bf-name" class="input" placeholder="例如：默认图床" />
-              </label>
-              <label class="field">
-                <span class="field-label">R2 桶名 (Bucket)</span>
-                <input id="bf-r2" class="input" placeholder="例如：imgbed" />
-              </label>
-              <label class="field">
-                <span class="field-label">Endpoint (S3 API 地址)</span>
-                <input id="bf-endpoint" class="input" placeholder="例如：https://xxx.r2.cloudflarestorage.com" />
-              </label>
-              <label class="field">
-                <span class="field-label">Account ID</span>
-                <input id="bf-account" class="input" placeholder="Cloudflare 帐号 ID" />
-              </label>
-              <label class="field">
-                <span class="field-label">Access Key ID</span>
-                <input id="bf-access" class="input" placeholder="R2 Access Key ID" />
-              </label>
-              <label class="field">
-                <span class="field-label">Secret Access Key</span>
-                <input id="bf-secret" class="input" placeholder="R2 Secret Access Key" />
-              </label>
-              <label class="field">
-                <span class="field-label">区域 (Region)</span>
-                <input id="bf-region" class="input" placeholder="例如：auto / eu" />
-              </label>
-              <label class="field">
-                <span class="field-label">最大配额 (GiB)</span>
-                <input id="bf-max" class="input" placeholder="例如：10" />
-              </label>
-              <label class="field field-inline">
-                <span class="field-label">启用状态</span>
-                <label class="toggle">
-                  <input type="checkbox" id="bf-active" checked />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span class="toggle-text" id="bf-active-text">已启用</span>
-                </label>
-              </label>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn-primary" id="btn-save-bucket" type="button">保存配置</button>
-              <button class="btn-secondary" id="btn-reset-bucket" type="button">重置表单</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Turnstile 面板 -->
-        <section id="panel-turnstile" class="panel">
-          <div class="panel-header">
-            <div>
-              <h1 class="panel-title">Turnstile 人机验证</h1>
-              <p class="panel-sub">在上传接口前增加 Cloudflare Turnstile 校验，防止滥用与刷流量。</p>
-            </div>
-            <span id="ts-status-tag" class="pill-status pill-off">状态：未启用</span>
-          </div>
-
-          <div class="form-card">
-            <div class="form-header no-border">
-              <div>
-                <div class="form-title">基础配置</div>
-                <div class="form-sub">在 Turnstile 控制台创建站点后，将 Site Key / Secret Key 填入。</div>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <label class="field field-inline">
-                <span class="field-label">启用 Turnstile</span>
-                <label class="toggle">
-                  <input type="checkbox" id="ts-enabled" />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span class="toggle-text" id="ts-toggle-text">当前：关闭</span>
-                </label>
-              </label>
-              <label class="field">
-                <span class="field-label">Site Key</span>
-                <input id="ts-site" class="input" placeholder="从 Turnstile 控制台复制" />
-              </label>
-              <label class="field">
-                <span class="field-label">Secret Key</span>
-                <input id="ts-secret" class="input" placeholder="仅存储于后端，不会在前端回显" />
-              </label>
-              <label class="field">
-                <span class="field-label">测试 Token（可选）</span>
-                <input id="ts-token" class="input" placeholder="如需在线测试，可从前端页面获取" />
-              </label>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn-primary" id="btn-save-ts" type="button">测试并保存配置</button>
-              <button class="btn-secondary" id="btn-refresh-ts" type="button">重新读取配置</button>
-            </div>
-          </div>
-        </section>
+        </div>
+        <div class="table-wrapper" style="margin-top:10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>名称 / 桶名</th>
+                <th>R2 账号</th>
+                <th>区域 / 端点</th>
+                <th>用量 / 配额</th>
+                <th>状态</th>
+                <th style="text-align:right;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="bucket-table-body"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="bucket-empty" style="display:none;">
+          <p><strong>当前还没有任何存储桶。</strong> 点击右上角「新建存储桶」，进入 R2 配置表单并创建第一个桶。</p>
+        </div>
       </section>
-    </main>
-  </div>
 
-  <script src="/admin/dashboard.js"></script>
+      <!-- Turnstile 视图 -->
+      <section class="card hidden" data-view-id="turnstile">
+        <div class="card-header">
+          <div>
+            <h2>Turnstile 防滥用配置</h2>
+            <p>可为上传接口与后台登录启用 Cloudflare Turnstile 人机验证。</p>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-soft" id="ts-status-badge">状态未知</span>
+          </div>
+        </div>
+        <form id="turnstile-form">
+          <div class="form-row">
+            <div class="field">
+              <label>启用 Turnstile</label>
+              <label class="switch-label">
+                <span class="switch" id="ts-switch"><span class="switch-knob"></span></span>
+                <span id="ts-status-label">关闭</span>
+              </label>
+              <small>启用后，上传接口会要求携带 Turnstile token，并在后端校验。</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Site Key</label>
+              <input id="ts-site-key" type="text" placeholder="从 Cloudflare Turnstile 控制台复制">
+            </div>
+            <div class="field">
+              <label>Secret Key</label>
+              <input id="ts-secret-key" type="password" autocomplete="off" placeholder="保存时写入数据库，无法回显">
+              <small>修改配置时需重新填写 Secret Key；为空将清空已有密钥。</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>测试 Token（可选）</label>
+              <input id="ts-test-token" type="text" placeholder="可先在前端拿一次 token 粘贴到这里">
+              <small>「测试配置」将调用 Turnstile siteverify 验证当前 Secret Key 是否有效。</small>
+            </div>
+          </div>
+          <div class="overlay-footer" style="padding-top:4px;">
+            <div class="helper-row">
+              <span class="helper-pill">提示：仅在启用 Turnstile 时强制要求同时提供 Site Key 与 Secret Key。</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn btn-ghost" id="btn-test-turnstile">测试配置</button>
+              <button type="submit" class="btn btn-primary">保存配置</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- 存储桶 / R2 配置侧边表单 -->
+<div class="overlay" id="bucket-overlay">
+  <div class="overlay-inner">
+    <div class="overlay-header">
+      <div>
+        <h3 id="bucket-overlay-title">新建存储桶</h3>
+        <p id="bucket-overlay-subtitle">为单个存储桶填写完整的 R2 S3 配置与容量限制。</p>
+      </div>
+      <button class="overlay-close" id="bucket-overlay-close" aria-label="关闭">×</button>
+    </div>
+    <form id="bucket-form">
+      <div class="overlay-body">
+        <div class="form-row">
+          <div class="field">
+            <label>显示名称</label>
+            <input id="f-name" type="text" placeholder="例如：公共图床（全球）" required>
+            <small>仅用于后台展示，便于区分不同用途的桶。</small>
+          </div>
+          <div class="field">
+            <label>R2 桶名（Bucket）</label>
+            <input id="f-r2-bucket" type="text" placeholder="与 Cloudflare R2 控制面板中的桶名一致" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>R2 Account ID</label>
+            <input id="f-r2-account-id" type="text" placeholder="Cloudflare 概览页中的 Account ID" required>
+          </div>
+          <div class="field">
+            <label>Access Key ID</label>
+            <input id="f-r2-access-key" type="text" autocomplete="off" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Secret Access Key</label>
+            <input id="f-r2-secret-key" type="password" autocomplete="off">
+            <small id="secret-hint">新建时必填；编辑时留空表示不修改现有密钥。</small>
+          </div>
+          <div class="field">
+            <label>区域（Region）</label>
+            <input id="f-r2-region" type="text" placeholder="auto / eu / eu-auto 等，留空默认 auto">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>R2 S3 端点（Endpoint）</label>
+            <input id="f-r2-endpoint" type="text" placeholder="可留空自动推导，例如：https://&lt;account&gt;.r2.cloudflarestorage.com">
+            <small>只写协议 + 域名，不要带路径或桶名，例如不要写 <code>/bucket</code>。</small>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>最大容量（GB）</label>
+            <input id="f-max-gb" type="number" min="0" step="0.1" placeholder="0 表示不限">
+            <small>前端会换算为字节存入数据库；配额按 <code>current_bytes + size &lt;= max_bytes</code> 校验。</small>
+          </div>
+          <div class="field">
+            <label>是否参与自动分配</label>
+            <label class="switch-label">
+              <span class="switch" id="bucket-active-switch"><span class="switch-knob"></span></span>
+              <span id="bucket-active-text">参与 auto 分配</span>
+            </label>
+            <small>关闭后该桶仍可通过固定 bucketID 上传，但不会被自动选中。</small>
+          </div>
+        </div>
+        <div class="notice">
+          <span class="notice-strong">安全提示：</span>
+          R2 访问密钥仅存储在服务器数据库中，不会在前端回显。若怀疑泄露，可在 Cloudflare 后台重置密钥后在此处更新。
+        </div>
+      </div>
+      <div class="overlay-footer">
+        <div class="helper-row">
+          <span class="helper-pill">所有 R2 配置都从「存储桶管理」进入此表单，不再出现全局 R2 设置。</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-ghost" id="bucket-cancel">取消</button>
+          <button type="submit" class="btn btn-primary" id="bucket-save">保存</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/admin/dashboard.js"></script>
 </body>
 </html>

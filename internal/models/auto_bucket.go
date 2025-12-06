@@ -3,55 +3,90 @@ package models
 import (
 	"context"
 	"errors"
+	"math"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PickAutoBucketID 从 buckets 表中自动选一个桶的 ID 返回。
-// 新实现：只选择 is_active=true 且尚未“用满”的桶：
-//   - max_bytes <= 0 表示不限配额，一直可用；
-//   - 否则要求 current_bytes < max_bytes。
+// PickAutoBucketID 从 buckets 表中自动选出一个「可用」的桶 ID。
 // 选择策略：
-//   1) 优先不限配额的桶；
-//   2) 其次按剩余空间 (max_bytes - current_bytes) 从大到小；
-//   3) 再按 created_at 由早到晚，保证结果相对稳定。
+//  1. 仅考虑 is_active = TRUE 的桶；
+//  2. max_bytes = 0 视为不限空间，优先级最高；
+//  3. 对于 max_bytes > 0 的桶，如果 current_bytes >= max_bytes 视为已满，跳过；
+//  4. 在所有「有空间」的桶中，按剩余空间从大到小选择一个；
+//  5. 如果没有任何可用桶，返回空字符串 ""，不视为错误。
 func PickAutoBucketID(ctx context.Context, pool *pgxpool.Pool) (string, error) {
 	if pool == nil {
 		return "", errors.New("nil db pool")
 	}
 
 	const q = `
-SELECT id::text
-FROM buckets
-WHERE
-    is_active = TRUE
-    AND (
-        max_bytes <= 0
-        OR current_bytes < max_bytes
-    )
-ORDER BY
-    -- 不限配额的桶优先
-    CASE WHEN max_bytes <= 0 THEN 0 ELSE 1 END,
-    -- 其次剩余空间从大到小
-    CASE
-        WHEN max_bytes <= 0 THEN NULL
-        ELSE (max_bytes - current_bytes)
-    END DESC,
-    -- 最后按创建时间，保证一定稳定性
-    created_at ASC
-LIMIT 1
-`
+		SELECT
+			id,
+			max_bytes,
+			current_bytes,
+			is_active
+		FROM buckets
+	`
 
-	var id string
-	err := pool.QueryRow(ctx, q).Scan(&id)
+	rows, err := pool.Query(ctx, q)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			// 没有符合条件的桶，返回空 ID，由调用方决定提示文案
-			return "", nil
+		return "", err
+	}
+	defer rows.Close()
+
+	var (
+		bestID    uuid.UUID
+		bestScore float64
+		found     bool
+	)
+
+	for rows.Next() {
+		var (
+			id           uuid.UUID
+			maxBytes     int64
+			currentBytes int64
+			isActive     bool
+		)
+		if err := rows.Scan(&id, &maxBytes, &currentBytes, &isActive); err != nil {
+			return "", err
 		}
+		if !isActive {
+			continue
+		}
+
+		// 计算“评分”：越大越优先
+		var score float64
+
+		if maxBytes == 0 {
+			// 不限配额：给一个极大的分数，始终优先
+			score = math.MaxFloat64 / 2
+		} else {
+			if currentBytes >= maxBytes {
+				// 已满，跳过
+				continue
+			}
+			remaining := maxBytes - currentBytes
+			if remaining <= 0 {
+				continue
+			}
+			score = float64(remaining)
+		}
+
+		if !found || score > bestScore {
+			found = true
+			bestScore = score
+			bestID = id
+		}
+	}
+	if err := rows.Err(); err != nil {
 		return "", err
 	}
 
-	return id, nil
+	if !found {
+		// 没有找到可用桶，不作为错误，由上层返回「暂无可用存储桶」
+		return "", nil
+	}
+	return bestID.String(), nil
 }
